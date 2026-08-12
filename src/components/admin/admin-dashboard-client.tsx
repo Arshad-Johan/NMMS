@@ -61,7 +61,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Clock
+  Clock,
+  Landmark
 } from "lucide-react";
 import { CategoryType, SchoolType, AttendanceStatus } from "@prisma/client";
 
@@ -164,33 +165,33 @@ function SearchableSchoolSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-9 rounded-lg bg-slate-950 border border-slate-800 px-3 text-left text-white text-xs font-mono flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        className="w-full h-10 rounded-md bg-white border border-gray-300 px-3 text-left text-gray-900 text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-[hsl(213,56%,24%)]"
       >
         <span className="truncate">
           {selectedSchool
             ? `${selectedSchool.udise} - ${selectedSchool.name}`
             : "-- Type or Select Participating School --"}
         </span>
-        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-10 z-50 rounded-lg bg-slate-950 border border-slate-800 shadow-2xl p-2 space-y-2 max-h-60 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-11 z-50 rounded-md bg-white border border-gray-200 shadow-lg p-2 space-y-2 max-h-60 overflow-y-auto">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+            <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
             <input
               type="text"
               autoFocus
               placeholder="Search by character, school name, or UDISE..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-8 pl-8 pr-2 bg-slate-900 border border-slate-800 rounded text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-9 pl-9 pr-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-[hsl(213,56%,24%)]"
             />
           </div>
 
           <div className="space-y-1">
             {filtered.length === 0 ? (
-              <div className="p-2 text-center text-slate-500 text-[11px]">
+              <div className="p-2 text-center text-gray-500 text-sm">
                 No matching school found.
               </div>
             ) : (
@@ -203,16 +204,16 @@ function SearchableSchoolSelect({
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className={`w-full text-left p-2 rounded text-xs font-mono transition-colors flex items-center justify-between ${
+                  className={`w-full text-left p-2 rounded text-sm transition-colors flex items-center justify-between ${
                     sc.udise === value
-                      ? "bg-indigo-600/30 text-indigo-300 font-semibold"
-                      : "text-slate-200 hover:bg-slate-900"
+                      ? "bg-blue-50 text-[hsl(213,56%,24%)] font-semibold"
+                      : "text-gray-700 hover:bg-gray-50"
                   }`}
                 >
                   <span className="truncate">
-                    <strong className="text-white">{sc.udise}</strong> - {sc.name}
+                    <strong className="text-gray-900">{sc.udise}</strong> - {sc.name}
                   </span>
-                  {sc.udise === value && <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
+                  {sc.udise === value && <Check className="w-4 h-4 text-[hsl(213,56%,24%)] shrink-0" />}
                 </button>
               ))
             )}
@@ -295,7 +296,7 @@ export default function AdminDashboardClient({
       (s.block && s.block.toLowerCase().includes(schoolSearch.toLowerCase()))
   );
 
-  // Pagination Calculations for Teachers
+  // Pagination Calculations
   const totalTeacherPages = Math.max(1, Math.ceil(filteredTeachers.length / ITEMS_PER_PAGE));
   const currentTeacherPage = Math.min(teacherPage, totalTeacherPages);
   const paginatedTeachers = filteredTeachers.slice(
@@ -303,7 +304,6 @@ export default function AdminDashboardClient({
     currentTeacherPage * ITEMS_PER_PAGE
   );
 
-  // Pagination Calculations for Schools
   const totalSchoolPages = Math.max(1, Math.ceil(filteredSchools.length / ITEMS_PER_PAGE));
   const currentSchoolPage = Math.min(schoolPage, totalSchoolPages);
   const paginatedSchools = filteredSchools.slice(
@@ -519,41 +519,40 @@ export default function AdminDashboardClient({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
         toast.success(`Downloaded ${status.toUpperCase()} Teachers Excel for "${title}" (${res.count} records)!`);
       }
     });
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
       {/* ── Header Navbar ── */}
-      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/90 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="h-9 w-9 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-              <Shield className="w-5 h-5" />
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded bg-[hsl(213,56%,24%)] flex items-center justify-center text-white shrink-0 shadow-sm">
+              <Landmark className="w-5 h-5" />
             </div>
             <div className="truncate">
-              <span className="font-semibold text-sm sm:text-base tracking-tight text-white block leading-none truncate">
+              <span className="font-bold text-base tracking-tight text-gray-900 block leading-tight truncate">
                 NMMS Admin Portal
               </span>
-              <span className="text-[10px] sm:text-[11px] font-medium tracking-wider text-slate-400 uppercase truncate block">
-                Tamil Nadu Department of School Education
+              <span className="text-xs font-medium tracking-wide text-gray-500 uppercase truncate block">
+                Govt. of Tamil Nadu
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+              <Avatar className="h-9 w-9">
                 <AvatarFallback>AD</AvatarFallback>
               </Avatar>
               <div className="hidden sm:block text-left">
-                <div className="text-xs sm:text-sm font-semibold text-white leading-tight">
+                <div className="text-sm font-semibold text-gray-900 leading-tight">
                   {adminName}
                 </div>
-                <div className="text-[11px] text-indigo-400 font-medium">Administrator</div>
+                <div className="text-xs text-gray-500 font-medium">Administrator</div>
               </div>
             </div>
 
@@ -562,9 +561,9 @@ export default function AdminDashboardClient({
                 variant="outline"
                 size="sm"
                 type="submit"
-                className="gap-1 text-xs px-2.5 sm:px-3 h-8 sm:h-9 text-slate-300 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 font-medium"
+                className="gap-2 text-xs h-9 text-gray-600 font-semibold"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sign Out</span>
               </Button>
             </form>
@@ -573,14 +572,14 @@ export default function AdminDashboardClient({
       </header>
 
       {/* ── Responsive Navigation Tabs ── */}
-      <div className="border-b border-slate-800 bg-slate-900/40 sticky top-16 z-30">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 flex items-center gap-1 overflow-x-auto py-2 scroll-smooth">
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-2 overflow-x-auto py-2.5">
           {[
-            { id: "overview", label: "Overview", icon: Layers },
+            { id: "overview", label: "Dashboard", icon: Layers },
             { id: "sessions", label: "Sessions", icon: Video },
-            { id: "new-session", label: "Create Session", icon: Plus },
-            { id: "teachers", label: "Teachers Directory", icon: Users },
-            { id: "schools", label: "Schools Directory", icon: SchoolIcon },
+            { id: "new-session", label: "New Session", icon: Plus },
+            { id: "teachers", label: "Teachers", icon: Users },
+            { id: "schools", label: "Schools", icon: SchoolIcon },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -589,13 +588,13 @@ export default function AdminDashboardClient({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
                   isActive
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                    ? "bg-blue-50 text-[hsl(213,56%,24%)]"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-[hsl(213,56%,24%)]" : "text-gray-400"}`} />
                 {tab.label}
               </button>
             );
@@ -604,67 +603,66 @@ export default function AdminDashboardClient({
       </div>
 
       {/* ── Main Workspace Content ── */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* ── TAB 1: OVERVIEW ── */}
         {activeTab === "overview" && (
           <div className="space-y-6 animate-fade-up">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <Card className="border-slate-800 bg-slate-900/60">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <Card className="col-span-2 lg:col-span-1">
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
-                  <div className="space-y-0.5 sm:space-y-1">
-                    <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-400">Total Schools</p>
-                    <p className="text-xl sm:text-2xl font-semibold text-white">{schools.length}</p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Total Schools</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{schools.length}</p>
                   </div>
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+                  <div className="p-2 sm:p-3 rounded-lg bg-blue-50 text-blue-600 shrink-0">
                     <SchoolIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-800 bg-slate-900/60">
+              <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
-                  <div className="space-y-0.5 sm:space-y-1">
-                    <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-400">Total Teachers</p>
-                    <p className="text-xl sm:text-2xl font-semibold text-emerald-400">{teachers.length}</p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Teachers</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{teachers.length}</p>
                   </div>
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <div className="p-2 sm:p-3 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
                     <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-800 bg-slate-900/60">
+              <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
-                  <div className="space-y-0.5 sm:space-y-1">
-                    <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-400">Sessions Conducted</p>
-                    <p className="text-xl sm:text-2xl font-semibold text-indigo-400">{sessions.length}</p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Sessions</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{sessions.length}</p>
                   </div>
-                  <div className="p-2.5 sm:p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                  <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,56%,24%)]/10 text-[hsl(213,56%,24%)] shrink-0">
                     <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <h2 className="text-base sm:text-lg font-semibold text-white">Active & Recent Sessions</h2>
-              <Button size="sm" onClick={() => setActiveTab("new-session")} className="gap-1.5 text-xs w-full sm:w-auto">
-                <Plus className="w-4 h-4" /> Create New Session
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
+              <h2 className="text-lg font-bold text-gray-900">Recent Sessions Overview</h2>
+              <Button onClick={() => setActiveTab("new-session")} className="w-full sm:w-auto gap-2">
+                <Plus className="w-4 h-4" /> Schedule Session
               </Button>
             </div>
 
-            {/* Active & Recent Sessions Table */}
-            <Card className="border-slate-800 bg-slate-900/70">
+            <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto w-full">
-                  <Table className="min-w-[650px]">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Session Title</TableHead>
-                        <TableHead>Date & Timing</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Date & Time</TableHead>
                         <TableHead>Google Meet Link</TableHead>
                         <TableHead>Target Categories</TableHead>
-                        <TableHead>Attendance Excel Exports</TableHead>
+                        <TableHead>Exports</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -674,85 +672,76 @@ export default function AdminDashboardClient({
                         const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
                         return (
                           <TableRow key={s.id}>
-                            <TableCell className="font-medium text-white max-w-xs truncate">
+                            <TableCell className="font-semibold text-gray-900">
                               <div className="flex items-center gap-2">
-                                <span className="truncate">{s.title}</span>
-                                {expired && (
-                                  <Badge variant="outline" className="text-[10px] border-red-500/30 text-red-400 bg-red-500/10 shrink-0">
-                                    Expired
-                                  </Badge>
-                                )}
+                                <span className="truncate max-w-[200px]">{s.title}</span>
+                                {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
                               </div>
                             </TableCell>
-                            <TableCell className="text-slate-300 text-xs whitespace-nowrap">
-                              <div className="font-semibold text-white">
+                            <TableCell>
+                              <div className="font-medium text-gray-900">
                                 {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                               </div>
                               {formattedTime && (
-                                <div className="text-[11px] text-indigo-300 font-mono flex items-center gap-1 mt-0.5">
-                                  <Clock className="w-3 h-3 text-indigo-400" /> {formattedTime}
+                                <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
+                                  <Clock className="w-3 h-3" /> {formattedTime}
                                 </div>
                               )}
                             </TableCell>
-                            <TableCell className="whitespace-nowrap">
+                            <TableCell>
                               {expired ? (
-                                <Badge variant="outline" className="text-[10px] border-red-500/30 text-red-400 bg-red-500/10">
-                                  Expired
-                                </Badge>
+                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
                               ) : (
                                 <a
                                   href={s.generalMeetUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-xs text-indigo-400 hover:underline inline-flex items-center gap-1 max-w-[180px] truncate font-medium"
+                                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
                                 >
-                                  Meet Link <ExternalLink className="w-3 h-3" />
+                                  Open Meet <ExternalLink className="w-3 h-3" />
                                 </a>
                               )}
                             </TableCell>
-                            <TableCell className="whitespace-nowrap">
+                            <TableCell>
                               {s.categoryRules?.length === 0 ? (
-                                <Badge variant="secondary" className="text-[10px]">All Schools</Badge>
+                                <Badge variant="secondary">All Schools</Badge>
                               ) : (
-                                s.categoryRules?.map((r: any) => (
-                                  <Badge key={r.id} variant="outline" className="text-[10px] mr-1">{r.categoryType.replace("_", " ")}</Badge>
-                                ))
+                                <div className="flex gap-1 flex-wrap">
+                                  {s.categoryRules?.map((r: any) => (
+                                    <Badge key={r.id} variant="outline" className="bg-white">{r.categoryType.replace("_", " ")}</Badge>
+                                  ))}
+                                </div>
                               )}
                             </TableCell>
-
-                            <TableCell className="whitespace-nowrap">
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5">
+                            <TableCell>
+                              <div className="flex gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleExportSessionExcel(s.id, s.title, "present")}
                                   disabled={isPending}
-                                  className="h-7 text-[11px] gap-1 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-sm"
+                                  className="h-8 text-xs font-semibold"
                                 >
-                                  <Download className="w-3 h-3" />
-                                  Present Excel
+                                  Present
                                 </Button>
-
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleExportSessionExcel(s.id, s.title, "absent")}
                                   disabled={isPending}
-                                  className="h-7 text-[11px] gap-1 border-red-500/40 text-red-400 hover:bg-red-500/10 font-semibold shadow-sm"
+                                  className="h-8 text-xs font-semibold"
                                 >
-                                  <Download className="w-3 h-3" />
-                                  Absent Excel
+                                  Absent
                                 </Button>
                               </div>
                             </TableCell>
-
-                            <TableCell className="text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <Button size="sm" variant="ghost" onClick={() => setEditingSession({ ...s })} className="h-7 w-7 p-0 text-slate-400 hover:text-white">
-                                  <Edit2 className="w-3.5 h-3.5" />
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="icon" variant="ghost" onClick={() => setEditingSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                  <Edit2 className="w-4 h-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 p-0 text-red-400 hover:text-red-300">
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -772,24 +761,24 @@ export default function AdminDashboardClient({
           <div className="space-y-6 animate-fade-up">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-base sm:text-lg font-semibold text-white">All NMMS Training Sessions</h2>
-                <p className="text-xs text-slate-400">Edit titles, Meet URLs, or download session attendance Excel.</p>
+                <h2 className="text-lg font-bold text-gray-900">Training Sessions</h2>
+                <p className="text-sm text-gray-500">Manage all scheduled sessions and export attendance.</p>
               </div>
-              <Button size="sm" onClick={() => setActiveTab("new-session")} className="gap-1.5 text-xs w-full sm:w-auto">
-                <Plus className="w-4 h-4" /> Schedule Session
+              <Button onClick={() => setActiveTab("new-session")} className="w-full sm:w-auto gap-2">
+                <Plus className="w-4 h-4" /> Schedule New Session
               </Button>
             </div>
 
-            <Card className="border-slate-800 bg-slate-900/70">
+            <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto w-full">
-                  <Table className="min-w-[650px]">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Session Title</TableHead>
-                        <TableHead>Date & Timing</TableHead>
-                        <TableHead>Google Meet URL</TableHead>
-                        <TableHead>Attendance Excel Exports</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Google Meet Link</TableHead>
+                        <TableHead>Exports</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -799,76 +788,65 @@ export default function AdminDashboardClient({
                         const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
                         return (
                           <TableRow key={s.id}>
-                            <TableCell className="font-medium text-white max-w-xs truncate">
+                            <TableCell className="font-semibold text-gray-900">
                               <div className="flex items-center gap-2">
-                                <span className="truncate">{s.title}</span>
-                                {expired && (
-                                  <Badge variant="outline" className="text-[10px] border-red-500/30 text-red-400 bg-red-500/10 shrink-0">
-                                    Expired
-                                  </Badge>
-                                )}
+                                <span className="truncate max-w-[200px]">{s.title}</span>
+                                {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
                               </div>
                             </TableCell>
-                            <TableCell className="text-slate-300 text-xs whitespace-nowrap">
-                              <div className="font-semibold text-white">
+                            <TableCell>
+                              <div className="font-medium text-gray-900">
                                 {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                               </div>
                               {formattedTime && (
-                                <div className="text-[11px] text-indigo-300 font-mono flex items-center gap-1 mt-0.5">
-                                  <Clock className="w-3 h-3 text-indigo-400" /> {formattedTime}
+                                <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
+                                  <Clock className="w-3 h-3" /> {formattedTime}
                                 </div>
                               )}
                             </TableCell>
-                            <TableCell className="whitespace-nowrap">
+                            <TableCell>
                               {expired ? (
-                                <Badge variant="outline" className="text-[10px] border-red-500/30 text-red-400 bg-red-500/10">
-                                  Expired
-                                </Badge>
+                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
                               ) : (
                                 <a
                                   href={s.generalMeetUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-xs text-indigo-400 hover:underline inline-flex items-center gap-1 max-w-[180px] truncate font-medium"
+                                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
                                 >
-                                  Meet Link <ExternalLink className="w-3 h-3" />
+                                  Open Meet <ExternalLink className="w-3 h-3" />
                                 </a>
                               )}
                             </TableCell>
-
-                            <TableCell className="whitespace-nowrap">
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5">
+                            <TableCell>
+                              <div className="flex gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleExportSessionExcel(s.id, s.title, "present")}
                                   disabled={isPending}
-                                  className="h-7 text-[11px] gap-1 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-sm"
+                                  className="h-8 text-xs font-semibold"
                                 >
-                                  <Download className="w-3 h-3" />
-                                  Present Excel
+                                  <Download className="w-3 h-3 mr-1" /> Present
                                 </Button>
-
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleExportSessionExcel(s.id, s.title, "absent")}
                                   disabled={isPending}
-                                  className="h-7 text-[11px] gap-1 border-red-500/40 text-red-400 hover:bg-red-500/10 font-semibold shadow-sm"
+                                  className="h-8 text-xs font-semibold"
                                 >
-                                  <Download className="w-3 h-3" />
-                                  Absent Excel
+                                  <Download className="w-3 h-3 mr-1" /> Absent
                                 </Button>
                               </div>
                             </TableCell>
-
-                            <TableCell className="text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button size="sm" variant="outline" onClick={() => setEditingSession({ ...s })} className="h-7 px-2 text-xs">
-                                  <Edit2 className="w-3 h-3 mr-1" /> Edit
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="icon" variant="ghost" onClick={() => setEditingSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                  <Edit2 className="w-4 h-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 p-0 text-red-400 hover:text-red-300">
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -886,56 +864,51 @@ export default function AdminDashboardClient({
         {/* ── TAB 3: CREATE NEW SESSION ── */}
         {activeTab === "new-session" && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
-            <Card className="border-slate-800 bg-slate-900/90 shadow-xl">
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="text-lg sm:text-xl font-semibold text-white">Create New Session</CardTitle>
-                <CardDescription className="text-slate-400 text-xs">
-                  Schedule an NMMS training session for participating teachers across school categories.
+            <Card>
+              <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+                <CardTitle>Schedule Session</CardTitle>
+                <CardDescription>
+                  Create a new training schedule and specify target school categories.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-                <form onSubmit={handleCreateSession} className="space-y-4">
+              <CardContent className="pt-6">
+                <form onSubmit={handleCreateSession} className="space-y-5">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Session Title *</label>
-                    <Input placeholder="e.g. NMMS Orientation & MAT Strategy Session 1" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                    <label className="text-sm font-semibold text-gray-700">Session Title <span className="text-red-500">*</span></label>
+                    <Input placeholder="e.g. NMMS Orientation Session 1" value={title} onChange={(e) => setTitle(e.target.value)} required />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Description (Optional)</label>
-                    <Input placeholder="Brief session agenda or instruction" value={description} onChange={(e) => setDescription(e.target.value)} />
+                    <label className="text-sm font-semibold text-gray-700">Description</label>
+                    <Input placeholder="Brief agenda or instructions" value={description} onChange={(e) => setDescription(e.target.value)} />
                   </div>
 
-                  {/* Date and Timing Inputs */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5 sm:col-span-1">
-                      <label className="text-xs font-medium text-slate-300">Session Date *</label>
+                      <label className="text-sm font-semibold text-gray-700">Date <span className="text-red-500">*</span></label>
                       <Input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} required />
                     </div>
-
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">Start Time (Optional)</label>
+                      <label className="text-sm font-semibold text-gray-700">Start Time</label>
                       <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                     </div>
-
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-300">End Time (Optional)</label>
+                      <label className="text-sm font-semibold text-gray-700">End Time</label>
                       <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">Google Meet URL *</label>
+                    <label className="text-sm font-semibold text-gray-700">Google Meet URL <span className="text-red-500">*</span></label>
                     <Input placeholder="https://meet.google.com/abc-defg-hij" value={generalMeetUrl} onChange={(e) => setGeneralMeetUrl(e.target.value)} required />
                   </div>
 
-                  <div className="space-y-2 pt-3 border-t border-slate-800">
-                    <label className="text-xs font-medium text-slate-300 block">
-                      Target School Categories
-                    </label>
+                  <div className="space-y-3 pt-4 border-t border-gray-100">
+                    <label className="text-sm font-semibold text-gray-700">Target School Categories</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
-                        { id: "High_School", label: "High School", desc: "Target High School teachers" },
-                        { id: "Higher_Secondary_School", label: "Higher Secondary School", desc: "Target Higher Secondary teachers" },
+                        { id: "High_School", label: "High School" },
+                        { id: "Higher_Secondary_School", label: "Higher Secondary School" },
                       ].map((cat) => {
                         const isSelected = selectedCategories.includes(cat.id as CategoryType);
                         return (
@@ -948,43 +921,32 @@ export default function AdminDashboardClient({
                                 setSelectedCategories([...selectedCategories, cat.id as CategoryType]);
                               }
                             }}
-                            className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                            className={`p-4 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${
                               isSelected
-                                ? "bg-indigo-600/20 border-indigo-500 text-white shadow-sm"
-                                : "bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                                ? "bg-blue-50 border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)]"
+                                : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
                             }`}
                           >
-                            <div className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-indigo-500 bg-indigo-600 text-white" : "border-slate-700 bg-slate-900"}`}>
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            <div className={`h-5 w-5 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-[hsl(213,56%,24%)] bg-[hsl(213,56%,24%)] text-white" : "border-gray-300 bg-white"}`}>
+                              {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
-                            <div>
-                              <div className="text-xs font-semibold text-white">{cat.label}</div>
-                              <div className="text-[11px] text-slate-400">{cat.desc}</div>
-                            </div>
+                            <div className="text-sm font-semibold">{cat.label}</div>
                           </div>
                         );
                       })}
                     </div>
-                    <p className="text-[11px] text-slate-400 italic mt-1">
+                    <p className="text-xs text-gray-500 pt-1">
                       {selectedCategories.length === 0
-                        ? "• No filters selected: Session will be visible to ALL active teachers."
-                        : `• Filter active: Session will be visible ONLY to teachers in ${selectedCategories.map((c) => c.replace("_", " ")).join(" & ")}.`}
+                        ? "No filters selected. Session visible to ALL active teachers."
+                        : `Session visible ONLY to teachers in selected categories.`}
                     </p>
                   </div>
 
-                  <Button type="submit" className="w-full h-11 mt-4" disabled={isPending}>
-                    {isPending ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin-slow" />
-                        Creating Session...
-                      </>
-                    ) : (
-                      <>
-                        Create Session
-                        <Plus className="w-4 h-4 ml-1" />
-                      </>
-                    )}
-                  </Button>
+                  <div className="pt-2">
+                    <Button type="submit" className="w-full" disabled={isPending}>
+                      {isPending ? "Creating..." : "Save Session"}
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
@@ -994,38 +956,38 @@ export default function AdminDashboardClient({
         {/* ── TAB 4: TEACHERS DIRECTORY ── */}
         {activeTab === "teachers" && (
           <div className="space-y-6 animate-fade-up">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base sm:text-lg font-semibold text-white">Teachers Directory</h2>
-                <p className="text-xs text-slate-400">Total registered teachers ({filteredTeachers.length} record(s)).</p>
+                <h2 className="text-lg font-bold text-gray-900">Teachers Directory</h2>
+                <p className="text-sm text-gray-500">Manage registered teachers ({filteredTeachers.length} total).</p>
               </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-56">
-                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
                   <Input
-                    placeholder="Search name, mobile, UDISE..."
+                    placeholder="Search by name, mobile, UDISE..."
                     value={teacherSearch}
                     onChange={(e) => {
                       setTeacherSearch(e.target.value);
                       setTeacherPage(1);
                     }}
-                    className="pl-9 h-9 text-xs w-full"
+                    className="pl-9 h-9"
                   />
                 </div>
-                <Button size="sm" onClick={() => setIsAddTeacherOpen(true)} className="gap-1 text-xs h-9 w-full sm:w-auto">
-                  <UserPlus className="w-3.5 h-3.5" /> Add Teacher
+                <Button onClick={() => setIsAddTeacherOpen(true)} className="gap-2 h-9">
+                  <UserPlus className="w-4 h-4" /> Add Teacher
                 </Button>
               </div>
             </div>
 
-            <Card className="border-slate-800 bg-slate-900/70">
+            <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto w-full">
-                  <Table className="min-w-[600px]">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Teacher Name</TableHead>
-                        <TableHead>Mobile Number</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Mobile</TableHead>
                         <TableHead>School UDISE</TableHead>
                         <TableHead>Subject</TableHead>
                         <TableHead>Status</TableHead>
@@ -1035,29 +997,29 @@ export default function AdminDashboardClient({
                     <TableBody>
                       {paginatedTeachers.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-slate-500 text-xs">
+                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                             No teachers match your search.
                           </TableCell>
                         </TableRow>
                       ) : (
                         paginatedTeachers.map((t) => (
                           <TableRow key={t.id}>
-                            <TableCell className="font-medium text-white">{t.name ?? "Unassigned"}</TableCell>
-                            <TableCell className="text-slate-300 font-mono text-xs whitespace-nowrap">+91 {t.mobile}</TableCell>
-                            <TableCell className="text-slate-400 font-mono text-xs whitespace-nowrap">{t.schoolUdise}</TableCell>
-                            <TableCell className="text-slate-400 text-xs">{t.subject ?? "NMMS Incharge"}</TableCell>
-                            <TableCell className="whitespace-nowrap">
-                              <Badge variant={t.isActive ? "success" : "destructive"} className="text-[10px]">
+                            <TableCell className="font-semibold text-gray-900">{t.name ?? "Unassigned"}</TableCell>
+                            <TableCell className="font-mono text-sm text-gray-600">+91 {t.mobile}</TableCell>
+                            <TableCell className="font-mono text-sm text-gray-600">{t.schoolUdise}</TableCell>
+                            <TableCell className="text-gray-600">{t.subject ?? "NMMS Incharge"}</TableCell>
+                            <TableCell>
+                              <Badge variant={t.isActive ? "success" : "secondary"}>
                                 {t.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <Button size="sm" variant="ghost" onClick={() => setEditingTeacher({ ...t })} className="h-7 w-7 p-0 text-slate-400 hover:text-white">
-                                  <Edit2 className="w-3.5 h-3.5" />
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="icon" variant="ghost" onClick={() => setEditingTeacher({ ...t })} className="h-8 w-8 text-gray-500">
+                                  <Edit2 className="w-4 h-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteTeacher(t.id)} className="h-7 w-7 p-0 text-red-400 hover:text-red-300">
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteTeacher(t.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -1068,31 +1030,20 @@ export default function AdminDashboardClient({
                   </Table>
                 </div>
 
-                {/* Teacher Directory Pagination Controls */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-800 bg-slate-900/90 text-xs text-slate-400">
-                  <div className="text-center sm:text-left">
-                    Showing{" "}
-                    <span className="font-semibold text-white">
-                      {filteredTeachers.length === 0 ? 0 : (currentTeacherPage - 1) * ITEMS_PER_PAGE + 1}
-                    </span>{" "}
-                    to{" "}
-                    <span className="font-semibold text-white">
-                      {Math.min(currentTeacherPage * ITEMS_PER_PAGE, filteredTeachers.length)}
-                    </span>{" "}
-                    of <span className="font-semibold text-white">{filteredTeachers.length}</span> teachers
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 border-t border-gray-200 bg-gray-50/50">
+                  <div className="text-sm text-gray-600">
+                    Showing <span className="font-bold text-gray-900">{filteredTeachers.length === 0 ? 0 : (currentTeacherPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-gray-900">{Math.min(currentTeacherPage * ITEMS_PER_PAGE, filteredTeachers.length)}</span> of <span className="font-bold text-gray-900">{filteredTeachers.length}</span>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={currentTeacherPage <= 1}
                       onClick={() => setTeacherPage((p) => p - 1)}
-                      className="h-8 px-2.5 text-xs gap-1"
                     >
-                      <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Prev
                     </Button>
-                    <span className="text-slate-300 px-2 font-medium">
+                    <span className="text-sm font-medium text-gray-600 px-2">
                       Page {currentTeacherPage} of {totalTeacherPages}
                     </span>
                     <Button
@@ -1100,9 +1051,8 @@ export default function AdminDashboardClient({
                       variant="outline"
                       disabled={currentTeacherPage >= totalTeacherPages}
                       onClick={() => setTeacherPage((p) => p + 1)}
-                      className="h-8 px-2.5 text-xs gap-1"
                     >
-                      Next <ChevronRight className="w-3.5 h-3.5" />
+                      Next <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </div>
                 </div>
@@ -1114,14 +1064,14 @@ export default function AdminDashboardClient({
         {/* ── TAB 5: SCHOOLS DIRECTORY ── */}
         {activeTab === "schools" && (
           <div className="space-y-6 animate-fade-up">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base sm:text-lg font-semibold text-white">Schools Directory</h2>
-                <p className="text-xs text-slate-400">Schools participating in the NMMS programme ({filteredSchools.length} record(s)).</p>
+                <h2 className="text-lg font-bold text-gray-900">Schools Directory</h2>
+                <p className="text-sm text-gray-500">Participating institutions ({filteredSchools.length} total).</p>
               </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-56">
-                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
                   <Input
                     placeholder="Search UDISE, school, block..."
                     value={schoolSearch}
@@ -1129,42 +1079,42 @@ export default function AdminDashboardClient({
                       setSchoolSearch(e.target.value);
                       setSchoolPage(1);
                     }}
-                    className="pl-9 h-9 text-xs w-full"
+                    className="pl-9 h-9"
                   />
                 </div>
-                <Button size="sm" onClick={() => setIsAddSchoolOpen(true)} className="gap-1 text-xs h-9 w-full sm:w-auto">
-                  <Building2 className="w-3.5 h-3.5" /> Add School
+                <Button onClick={() => setIsAddSchoolOpen(true)} className="gap-2 h-9">
+                  <Building2 className="w-4 h-4" /> Add School
                 </Button>
               </div>
             </div>
 
-            <Card className="border-slate-800 bg-slate-900/70">
+            <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto w-full">
-                  <Table className="min-w-[600px]">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>UDISE Code</TableHead>
                         <TableHead>School Name</TableHead>
                         <TableHead>Block / District</TableHead>
-                        <TableHead>Category Type</TableHead>
+                        <TableHead>Category</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedSchools.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-slate-500 text-xs">
+                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                             No schools match your search.
                           </TableCell>
                         </TableRow>
                       ) : (
                         paginatedSchools.map((sc) => (
                           <TableRow key={sc.udise}>
-                            <TableCell className="font-mono text-xs font-semibold text-indigo-400 whitespace-nowrap">{sc.udise}</TableCell>
-                            <TableCell className="font-medium text-white max-w-sm truncate">{sc.name}</TableCell>
-                            <TableCell className="text-slate-400 text-xs whitespace-nowrap">{sc.block ?? "—"} / {sc.educationDistrict ?? "—"}</TableCell>
-                            <TableCell className="whitespace-nowrap">
+                            <TableCell className="font-mono font-bold text-[hsl(213,56%,24%)]">{sc.udise}</TableCell>
+                            <TableCell className="font-semibold text-gray-900 max-w-sm truncate">{sc.name}</TableCell>
+                            <TableCell className="text-gray-600">{sc.block ?? "—"} / {sc.educationDistrict ?? "—"}</TableCell>
+                            <TableCell>
                               <select
                                 value={sc.categoryType ?? ""}
                                 onChange={(e) =>
@@ -1173,20 +1123,20 @@ export default function AdminDashboardClient({
                                     e.target.value ? (e.target.value as CategoryType) : null
                                   )
                                 }
-                                className="h-7 rounded bg-slate-950 border border-slate-800 text-[11px] px-2 font-medium text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                className="h-8 rounded-md bg-white border border-gray-300 text-sm px-2 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[hsl(213,56%,24%)]"
                               >
-                                <option value="">None (null)</option>
+                                <option value="">Unspecified</option>
                                 <option value="High_School">High School</option>
                                 <option value="Higher_Secondary_School">Higher Secondary School</option>
                               </select>
                             </TableCell>
-                            <TableCell className="text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <Button size="sm" variant="ghost" onClick={() => setEditingSchool({ ...sc })} className="h-7 w-7 p-0 text-slate-400 hover:text-white">
-                                  <Edit2 className="w-3.5 h-3.5" />
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="icon" variant="ghost" onClick={() => setEditingSchool({ ...sc })} className="h-8 w-8 text-gray-500">
+                                  <Edit2 className="w-4 h-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => handleDeleteSchool(sc.udise)} className="h-7 w-7 p-0 text-red-400 hover:text-red-300">
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSchool(sc.udise)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -1197,31 +1147,20 @@ export default function AdminDashboardClient({
                   </Table>
                 </div>
 
-                {/* School Directory Pagination Controls */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-800 bg-slate-900/90 text-xs text-slate-400">
-                  <div className="text-center sm:text-left">
-                    Showing{" "}
-                    <span className="font-semibold text-white">
-                      {filteredSchools.length === 0 ? 0 : (currentSchoolPage - 1) * ITEMS_PER_PAGE + 1}
-                    </span>{" "}
-                    to{" "}
-                    <span className="font-semibold text-white">
-                      {Math.min(currentSchoolPage * ITEMS_PER_PAGE, filteredSchools.length)}
-                    </span>{" "}
-                    of <span className="font-semibold text-white">{filteredSchools.length}</span> schools
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 border-t border-gray-200 bg-gray-50/50">
+                  <div className="text-sm text-gray-600">
+                    Showing <span className="font-bold text-gray-900">{filteredSchools.length === 0 ? 0 : (currentSchoolPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-gray-900">{Math.min(currentSchoolPage * ITEMS_PER_PAGE, filteredSchools.length)}</span> of <span className="font-bold text-gray-900">{filteredSchools.length}</span>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={currentSchoolPage <= 1}
                       onClick={() => setSchoolPage((p) => p - 1)}
-                      className="h-8 px-2.5 text-xs gap-1"
                     >
-                      <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Prev
                     </Button>
-                    <span className="text-slate-300 px-2 font-medium">
+                    <span className="text-sm font-medium text-gray-600 px-2">
                       Page {currentSchoolPage} of {totalSchoolPages}
                     </span>
                     <Button
@@ -1229,9 +1168,8 @@ export default function AdminDashboardClient({
                       variant="outline"
                       disabled={currentSchoolPage >= totalSchoolPages}
                       onClick={() => setSchoolPage((p) => p + 1)}
-                      className="h-8 px-2.5 text-xs gap-1"
                     >
-                      Next <ChevronRight className="w-3.5 h-3.5" />
+                      Next <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </div>
                 </div>
@@ -1245,70 +1183,76 @@ export default function AdminDashboardClient({
       {/* MODALS & DIALOGS */}
       {/* --------------------------------------------------------------------------- */}
 
-      {/* ADD TEACHER MODAL WITH SEARCHABLE SCHOOL COMBOBOX */}
+      {/* ADD TEACHER MODAL */}
       {isAddTeacherOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <Card className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto border-slate-800 bg-slate-900 shadow-2xl">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6">
-              <CardTitle className="text-base sm:text-lg font-semibold text-white">Add New Teacher</CardTitle>
-              <button onClick={() => setIsAddTeacherOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl border-0">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Register Teacher</CardTitle>
+              <button onClick={() => setIsAddTeacherOpen(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
               </button>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-              <form onSubmit={handleAddTeacher} className="space-y-3 text-xs">
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Teacher Name *</label>
-                  <Input
-                    required
-                    placeholder="e.g. K. Arulmozhi"
-                    value={newTeacherData.name}
-                    onChange={(e) => setNewTeacherData({ ...newTeacherData, name: e.target.value })}
-                  />
+            <CardContent className="pt-6">
+              <form onSubmit={handleAddTeacher} className="space-y-4 text-sm">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Teacher Name <span className="text-red-500">*</span></label>
+                  <Input required placeholder="e.g. K. Arulmozhi" value={newTeacherData.name} onChange={(e) => setNewTeacherData({ ...newTeacherData, name: e.target.value })} />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">10-Digit Mobile Number *</label>
-                  <Input
-                    required
-                    maxLength={10}
-                    placeholder="e.g. 9876543210"
-                    value={newTeacherData.mobile}
-                    onChange={(e) => setNewTeacherData({ ...newTeacherData, mobile: e.target.value })}
-                  />
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Mobile Number <span className="text-red-500">*</span></label>
+                  <Input required maxLength={10} placeholder="10-digit number" value={newTeacherData.mobile} onChange={(e) => setNewTeacherData({ ...newTeacherData, mobile: e.target.value })} />
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Search & Select School / UDISE Code *</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">School / UDISE Code <span className="text-red-500">*</span></label>
                   {schools.length > 0 ? (
-                    <SearchableSchoolSelect
-                      schools={schools}
-                      value={newTeacherData.schoolUdise}
-                      onChange={(udise) => setNewTeacherData({ ...newTeacherData, schoolUdise: udise })}
-                    />
+                    <SearchableSchoolSelect schools={schools} value={newTeacherData.schoolUdise} onChange={(udise) => setNewTeacherData({ ...newTeacherData, schoolUdise: udise })} />
                   ) : (
-                    <Input
-                      required
-                      placeholder="e.g. 33240..."
-                      value={newTeacherData.schoolUdise}
-                      onChange={(e) => setNewTeacherData({ ...newTeacherData, schoolUdise: e.target.value })}
-                    />
+                    <Input required placeholder="UDISE code" value={newTeacherData.schoolUdise} onChange={(e) => setNewTeacherData({ ...newTeacherData, schoolUdise: e.target.value })} />
                   )}
-                  <p className="text-[11px] text-slate-400 italic pt-0.5">
-                    • Type school name or UDISE digits to search instantly.
-                  </p>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Subject / Role</label>
-                  <Input
-                    placeholder="NMMS Incharge"
-                    value={newTeacherData.subject}
-                    onChange={(e) => setNewTeacherData({ ...newTeacherData, subject: e.target.value })}
-                  />
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Role / Subject</label>
+                  <Input placeholder="NMMS Incharge" value={newTeacherData.subject} onChange={(e) => setNewTeacherData({ ...newTeacherData, subject: e.target.value })} />
                 </div>
-                <Button type="submit" className="w-full h-10 mt-2" disabled={isPending || !newTeacherData.schoolUdise}>
-                  {isPending ? "Registering Teacher..." : "Save Teacher"}
+                <Button type="submit" className="w-full mt-2" disabled={isPending || !newTeacherData.schoolUdise}>
+                  {isPending ? "Saving..." : "Register Teacher"}
                 </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* EDIT TEACHER MODAL */}
+      {editingTeacher && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl border-0">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Edit Teacher</CardTitle>
+              <button onClick={() => setEditingTeacher(null)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handleUpdateTeacher} className="space-y-4 text-sm">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Teacher Name</label>
+                  <Input value={editingTeacher.name ?? ""} onChange={(e) => setEditingTeacher({ ...editingTeacher, name: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Mobile Number</label>
+                  <Input value={editingTeacher.mobile ?? ""} onChange={(e) => setEditingTeacher({ ...editingTeacher, mobile: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">School / UDISE Code</label>
+                  <SearchableSchoolSelect schools={schools} value={editingTeacher.schoolUdise ?? ""} onChange={(udise) => setEditingTeacher({ ...editingTeacher, schoolUdise: udise })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Role / Subject</label>
+                  <Input value={editingTeacher.subject ?? ""} onChange={(e) => setEditingTeacher({ ...editingTeacher, subject: e.target.value })} />
+                </div>
+                <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
               </form>
             </CardContent>
           </Card>
@@ -1317,44 +1261,45 @@ export default function AdminDashboardClient({
 
       {/* ADD SCHOOL MODAL */}
       {isAddSchoolOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <Card className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto border-slate-800 bg-slate-900 shadow-2xl">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6">
-              <CardTitle className="text-base sm:text-lg font-semibold text-white">Add New School</CardTitle>
-              <button onClick={() => setIsAddSchoolOpen(false)} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl border-0">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Add School</CardTitle>
+              <button onClick={() => setIsAddSchoolOpen(false)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-              <form onSubmit={handleAddSchool} className="space-y-3 text-xs">
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">UDISE Code *</label>
+            <CardContent className="pt-6">
+              <form onSubmit={handleAddSchool} className="space-y-4 text-sm">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">UDISE Code <span className="text-red-500">*</span></label>
                   <Input required placeholder="33240..." value={newSchoolData.udise} onChange={(e) => setNewSchoolData({ ...newSchoolData, udise: e.target.value })} />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">School Name *</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">School Name <span className="text-red-500">*</span></label>
                   <Input required placeholder="Govt Higher Secondary School..." value={newSchoolData.name} onChange={(e) => setNewSchoolData({ ...newSchoolData, name: e.target.value })} />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Block</label>
-                  <Input placeholder="Melur" value={newSchoolData.block} onChange={(e) => setNewSchoolData({ ...newSchoolData, block: e.target.value })} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">Block</label>
+                    <Input placeholder="Melur" value={newSchoolData.block} onChange={(e) => setNewSchoolData({ ...newSchoolData, block: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">District</label>
+                    <Input placeholder="Madurai" value={newSchoolData.educationDistrict} onChange={(e) => setNewSchoolData({ ...newSchoolData, educationDistrict: e.target.value })} />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Category Type</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Category Type</label>
                   <select
                     value={newSchoolData.categoryType ?? ""}
-                    onChange={(e) =>
-                      setNewSchoolData({
-                        ...newSchoolData,
-                        categoryType: e.target.value ? (e.target.value as CategoryType) : null,
-                      })
-                    }
-                    className="w-full h-9 rounded-lg bg-slate-950 border border-slate-800 px-3 text-white text-xs"
+                    onChange={(e) => setNewSchoolData({ ...newSchoolData, categoryType: e.target.value ? (e.target.value as CategoryType) : null })}
+                    className="w-full h-10 rounded-md bg-white border border-gray-300 px-3 text-gray-900 focus:ring-2 focus:ring-[hsl(213,56%,24%)] focus:outline-none"
                   >
-                    <option value="">None / Unspecified (null)</option>
+                    <option value="">Unspecified</option>
                     <option value="High_School">High School</option>
                     <option value="Higher_Secondary_School">Higher Secondary School</option>
                   </select>
                 </div>
-                <Button type="submit" className="w-full h-10 mt-2" disabled={isPending}>Save School</Button>
+                <Button type="submit" className="w-full mt-2" disabled={isPending}>Save School</Button>
               </form>
             </CardContent>
           </Card>
@@ -1363,85 +1308,41 @@ export default function AdminDashboardClient({
 
       {/* EDIT SCHOOL MODAL */}
       {editingSchool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <Card className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto border-slate-800 bg-slate-900 shadow-2xl">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6">
-              <CardTitle className="text-base sm:text-lg font-semibold text-white">Edit School Details</CardTitle>
-              <button onClick={() => setEditingSchool(null)} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl border-0">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Edit School</CardTitle>
+              <button onClick={() => setEditingSchool(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-              <form onSubmit={handleUpdateSchool} className="space-y-3 text-xs">
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">School Name</label>
+            <CardContent className="pt-6">
+              <form onSubmit={handleUpdateSchool} className="space-y-4 text-sm">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">School Name</label>
                   <Input value={editingSchool.name ?? ""} onChange={(e) => setEditingSchool({ ...editingSchool, name: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-slate-300 font-medium">Block</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">Block</label>
                     <Input value={editingSchool.block ?? ""} onChange={(e) => setEditingSchool({ ...editingSchool, block: e.target.value })} />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-slate-300 font-medium">District</label>
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">District</label>
                     <Input value={editingSchool.educationDistrict ?? ""} onChange={(e) => setEditingSchool({ ...editingSchool, educationDistrict: e.target.value })} />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Category Type</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Category Type</label>
                   <select
                     value={editingSchool.categoryType ?? ""}
-                    onChange={(e) =>
-                      setEditingSchool({
-                        ...editingSchool,
-                        categoryType: e.target.value ? (e.target.value as CategoryType) : null,
-                      })
-                    }
-                    className="w-full h-9 rounded-lg bg-slate-950 border border-slate-800 px-3 text-white text-xs"
+                    onChange={(e) => setEditingSchool({ ...editingSchool, categoryType: e.target.value ? (e.target.value as CategoryType) : null })}
+                    className="w-full h-10 rounded-md bg-white border border-gray-300 px-3 text-gray-900 focus:ring-2 focus:ring-[hsl(213,56%,24%)] focus:outline-none"
                   >
-                    <option value="">None / Unspecified (null)</option>
+                    <option value="">Unspecified</option>
                     <option value="High_School">High School</option>
                     <option value="Higher_Secondary_School">Higher Secondary School</option>
                   </select>
                 </div>
-                <Button type="submit" className="w-full h-10 mt-2" disabled={isPending}>Update School</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* EDIT TEACHER MODAL WITH SEARCHABLE SCHOOL COMBOBOX */}
-      {editingTeacher && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <Card className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto border-slate-800 bg-slate-900 shadow-2xl">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6">
-              <CardTitle className="text-base sm:text-lg font-semibold text-white">Edit Teacher</CardTitle>
-              <button onClick={() => setEditingTeacher(null)} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-              <form onSubmit={handleUpdateTeacher} className="space-y-3 text-xs">
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Teacher Name</label>
-                  <Input value={editingTeacher.name ?? ""} onChange={(e) => setEditingTeacher({ ...editingTeacher, name: e.target.value })} />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Mobile Number</label>
-                  <Input value={editingTeacher.mobile ?? ""} onChange={(e) => setEditingTeacher({ ...editingTeacher, mobile: e.target.value })} />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Search & Select School / UDISE Code</label>
-                  <SearchableSchoolSelect
-                    schools={schools}
-                    value={editingTeacher.schoolUdise ?? ""}
-                    onChange={(udise) => setEditingTeacher({ ...editingTeacher, schoolUdise: udise })}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Subject</label>
-                  <Input value={editingTeacher.subject ?? ""} onChange={(e) => setEditingTeacher({ ...editingTeacher, subject: e.target.value })} />
-                </div>
-                <Button type="submit" className="w-full h-10 mt-2" disabled={isPending}>Update Details</Button>
+                <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
               </form>
             </CardContent>
           </Card>
@@ -1450,23 +1351,23 @@ export default function AdminDashboardClient({
 
       {/* EDIT SESSION MODAL */}
       {editingSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <Card className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto border-slate-800 bg-slate-900 shadow-2xl">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 p-4 sm:p-6">
-              <CardTitle className="text-base sm:text-lg font-semibold text-white">Edit Session</CardTitle>
-              <button onClick={() => setEditingSession(null)} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl border-0">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Edit Session</CardTitle>
+              <button onClick={() => setEditingSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-              <form onSubmit={handleUpdateSession} className="space-y-3 text-xs">
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Session Title</label>
+            <CardContent className="pt-6">
+              <form onSubmit={handleUpdateSession} className="space-y-4 text-sm">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Session Title</label>
                   <Input value={editingSession.title ?? ""} onChange={(e) => setEditingSession({ ...editingSession, title: e.target.value })} />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Google Meet URL</label>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Google Meet URL</label>
                   <Input value={editingSession.generalMeetUrl ?? ""} onChange={(e) => setEditingSession({ ...editingSession, generalMeetUrl: e.target.value })} />
                 </div>
-                <Button type="submit" className="w-full h-10 mt-2" disabled={isPending}>Save Session</Button>
+                <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
               </form>
             </CardContent>
           </Card>

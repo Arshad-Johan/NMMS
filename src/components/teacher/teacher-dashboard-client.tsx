@@ -32,7 +32,8 @@ import {
   Sparkles,
   ExternalLink,
   ShieldCheck,
-  History
+  History,
+  Landmark
 } from "lucide-react";
 
 interface TeacherDashboardClientProps {
@@ -224,34 +225,34 @@ export default function TeacherDashboardClient({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
       {/* ── Header Navbar ── */}
-      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/90 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="h-9 w-9 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-              <GraduationCap className="w-5 h-5" />
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded bg-[hsl(213,56%,24%)] flex items-center justify-center text-white shrink-0 shadow-sm">
+              <Landmark className="w-5 h-5" />
             </div>
             <div className="truncate">
-              <span className="font-semibold text-sm sm:text-base tracking-tight text-white block leading-none truncate">
+              <span className="font-bold text-base tracking-tight text-gray-900 block leading-tight truncate">
                 NMMS Portal
               </span>
-              <span className="text-[10px] sm:text-[11px] font-medium tracking-wider text-slate-400 uppercase truncate block">
+              <span className="text-xs font-medium tracking-wide text-gray-500 uppercase truncate block">
                 Teacher Dashboard
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+              <Avatar className="h-9 w-9">
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <div className="hidden sm:block text-left">
-                <div className="text-xs sm:text-sm font-semibold text-white leading-tight">
+                <div className="text-sm font-semibold text-gray-900 leading-tight">
                   {teacher.name ?? "Teacher"}
                 </div>
-                <div className="text-[11px] text-slate-400 font-normal">
+                <div className="text-xs text-gray-500 font-medium">
                   +91 {teacher.mobile}
                 </div>
               </div>
@@ -262,9 +263,9 @@ export default function TeacherDashboardClient({
                 variant="outline"
                 size="sm"
                 type="submit"
-                className="gap-1 text-xs px-2.5 sm:px-3 h-8 sm:h-9 text-slate-300 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 font-medium"
+                className="gap-2 text-xs h-9 text-gray-600 font-semibold"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sign Out</span>
               </Button>
             </form>
@@ -273,106 +274,106 @@ export default function TeacherDashboardClient({
       </header>
 
       {/* ── Main Content Area ── */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Welcome Hero Banner */}
-        <Card className="border-slate-800 bg-slate-900/60 relative overflow-hidden">
-          <CardHeader className="sm:flex-row sm:items-center sm:justify-between gap-3 p-4 sm:p-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-medium text-indigo-400">
-                <Sparkles className="w-3.5 h-3.5" /> Welcome back
+        <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-[hsl(213,56%,24%)]">
+                Welcome to the NMMS Training Portal
               </div>
-              <CardTitle className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
                 {teacher.name ?? "Teacher"}
-              </CardTitle>
-              <CardDescription className="text-slate-300 font-normal flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm pt-1">
-                <span className="flex items-center gap-1">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+              </h1>
+              <div className="text-gray-600 font-medium flex flex-wrap items-center gap-x-3 gap-y-2 text-sm pt-1">
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-gray-400" />
                   {teacher.school.name}
                 </span>
-                <span className="text-slate-600 hidden sm:inline">•</span>
-                <span className="font-mono text-slate-400 text-xs block sm:inline">
+                <span className="text-gray-300 hidden sm:inline">|</span>
+                <span className="font-mono text-gray-500">
                   UDISE: {teacher.schoolUdise}
                 </span>
-              </CardDescription>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
+            <div className="flex flex-col gap-2 pt-2 md:pt-0">
               {teacher.school.categoryType && (
-                <Badge variant="outline" className="text-[11px] sm:text-xs border-indigo-500/30 text-indigo-300 bg-indigo-500/10">
+                <Badge variant="outline" className="bg-gray-50 text-gray-700 w-fit">
                   {teacher.school.categoryType.replace("_", " ")}
                 </Badge>
               )}
               {teacher.school.block && (
-                <Badge variant="secondary" className="text-[11px] sm:text-xs">
-                  <MapPin className="w-3 h-3 mr-1" />
+                <Badge variant="outline" className="bg-gray-50 text-gray-700 w-fit">
+                  <MapPin className="w-3 h-3 mr-1 text-gray-400" />
                   {teacher.school.block}
                 </Badge>
               )}
             </div>
-          </CardHeader>
-        </Card>
+          </div>
+        </div>
 
         {/* Attendance Summary Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="border-slate-800 bg-slate-900/60">
-            <CardContent className="p-3.5 sm:p-5 flex items-center justify-between">
-              <div className="space-y-0.5 sm:space-y-1">
-                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-400">
+          <Card>
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Total Sessions
                 </p>
-                <p className="text-xl sm:text-2xl font-semibold text-white">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {totalEvaluatedSessions}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-blue-50 text-blue-600 shrink-0">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-800 bg-slate-900/60">
-            <CardContent className="p-3.5 sm:p-5 flex items-center justify-between">
-              <div className="space-y-0.5 sm:space-y-1">
-                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-400">
+          <Card>
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Attended
                 </p>
-                <p className="text-xl sm:text-2xl font-semibold text-emerald-400">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {presentCount}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-800 bg-slate-900/60">
-            <CardContent className="p-3.5 sm:p-5 flex items-center justify-between">
-              <div className="space-y-0.5 sm:space-y-1">
-                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-400">
+          <Card>
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Missed
                 </p>
-                <p className="text-xl sm:text-2xl font-semibold text-red-400">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {missedCount}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600 shrink-0">
                 <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-800 bg-slate-900/60">
-            <CardContent className="p-3.5 sm:p-5 flex items-center justify-between">
-              <div className="space-y-0.5 sm:space-y-1">
-                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-400">
+          <Card>
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Rate
                 </p>
-                <p className="text-xl sm:text-2xl font-semibold text-indigo-400">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {attendanceRate !== null ? `${attendanceRate}%` : "—"}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,56%,24%)]/10 text-[hsl(213,56%,24%)] shrink-0">
                 <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
@@ -380,42 +381,40 @@ export default function TeacherDashboardClient({
         </div>
 
         {/* ── SCHEDULED NMMS TRAINING SESSIONS SECTION ── */}
-        <Card className="border-indigo-500/30 bg-slate-900/90 shadow-lg">
-          <CardHeader className="pb-3 p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <CardTitle className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
-                  <Video className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
-                  Scheduled NMMS Training Sessions
-                </CardTitle>
-                <CardDescription className="text-slate-400 text-xs font-normal mt-0.5">
-                  All training sessions scheduled for your school & district
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="text-indigo-400 border-indigo-500/30 w-fit text-[11px]">
-                {assignedSessions.length} Active
-              </Badge>
+        <Card className="border-[hsl(213,56%,24%)]/20 shadow-md">
+          <CardHeader className="bg-gray-50/50 border-b border-gray-100 flex flex-row items-center justify-between py-5">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="w-5 h-5 text-[hsl(213,56%,24%)]" />
+                Training Sessions
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Sessions scheduled for your school category.
+              </CardDescription>
             </div>
+            <Badge variant="secondary" className="font-bold">
+              {assignedSessions.length} Active
+            </Badge>
           </CardHeader>
 
           <CardContent className="p-0">
             {assignedSessions.length === 0 ? (
-              <div className="py-10 px-4 text-center space-y-2">
-                <div className="h-10 w-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 mx-auto">
-                  <Calendar className="w-5 h-5" />
+              <div className="py-12 px-4 text-center">
+                <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mx-auto mb-3">
+                  <Calendar className="w-6 h-6" />
                 </div>
-                <p className="text-sm font-medium text-slate-300">No scheduled sessions today</p>
-                <p className="text-xs text-slate-500">Upcoming training sessions will appear here when scheduled by admins.</p>
+                <p className="text-base font-semibold text-gray-900">No scheduled sessions</p>
+                <p className="text-sm text-gray-500 mt-1">Check back later for upcoming training sessions.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto w-full">
-                <Table className="min-w-[550px]">
+              <div className="overflow-x-auto">
+                <Table className="min-w-[600px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Session Title</TableHead>
-                      <TableHead>Date & Timing</TableHead>
-                      <TableHead>Attendance Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Session Details</TableHead>
+                      <TableHead>Schedule</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Join Meeting</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -425,15 +424,15 @@ export default function TeacherDashboardClient({
                       const expired = isSessionExpired(sessionItem.sessionDate, sessionItem.endTime, sessionItem.startTime);
 
                       return (
-                        <TableRow key={sessionItem.id}>
-                          <TableCell className="font-medium text-white max-w-xs">
-                            <div className="font-semibold text-slate-100">{sessionItem.title}</div>
+                        <TableRow key={sessionItem.id} className={isPresent ? "bg-emerald-50/30" : ""}>
+                          <TableCell className="max-w-[250px]">
+                            <div className="font-bold text-gray-900">{sessionItem.title}</div>
                             {sessionItem.description && (
-                              <div className="text-xs text-slate-400 line-clamp-1">{sessionItem.description}</div>
+                              <div className="text-sm text-gray-500 mt-0.5 line-clamp-1">{sessionItem.description}</div>
                             )}
                           </TableCell>
-                          <TableCell className="text-slate-300 text-xs whitespace-nowrap">
-                            <div className="font-medium text-slate-200">
+                          <TableCell>
+                            <div className="font-semibold text-gray-900">
                               {new Date(sessionItem.sessionDate).toLocaleDateString("en-IN", {
                                 day: "2-digit",
                                 month: "short",
@@ -441,42 +440,39 @@ export default function TeacherDashboardClient({
                               })}
                             </div>
                             {formattedTime && (
-                              <div className="text-[11px] text-indigo-300 font-mono flex items-center gap-1 mt-0.5">
-                                <Clock className="w-3 h-3 text-indigo-400" /> {formattedTime}
+                              <div className="text-xs font-medium text-gray-500 flex items-center gap-1 mt-1">
+                                <Clock className="w-3.5 h-3.5" /> {formattedTime}
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">
+                          <TableCell>
                             {isPresent ? (
-                              <Badge variant="success" className="gap-1 font-semibold text-xs">
+                              <Badge variant="success" className="gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5" /> Present
                               </Badge>
                             ) : expired ? (
-                              <Badge variant="destructive" className="text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/30 gap-1">
+                              <Badge variant="destructive" className="gap-1.5">
                                 <XCircle className="w-3.5 h-3.5" /> Absent
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="text-xs text-amber-400 bg-amber-500/10 border-amber-500/30">
-                                Not Marked Yet
+                              <Badge variant="secondary" className="gap-1.5 bg-amber-100 text-amber-800 hover:bg-amber-100">
+                                <Clock className="w-3.5 h-3.5" /> Pending
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2">
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end">
                               {expired ? (
-                                <Badge variant="outline" className="text-xs border-red-500/30 text-red-400 bg-red-500/10 px-3 py-1 font-medium gap-1">
-                                  <XCircle className="w-3.5 h-3.5 text-red-400" />
-                                  Expired
+                                <Badge variant="outline" className="text-gray-500 px-3 py-1.5">
+                                  Closed
                                 </Badge>
                               ) : (
                                 <Button
-                                  size="sm"
                                   onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired)}
-                                  className="h-9 px-3 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-sm"
+                                  className="h-10 gap-2 font-bold shadow-sm"
                                 >
-                                  <Video className="w-3.5 h-3.5" />
-                                  Join Google Meet
-                                  <ExternalLink className="w-3 h-3 ml-0.5 opacity-80" />
+                                  <Video className="w-4 h-4" />
+                                  Join & Mark Present
                                 </Button>
                               )}
                             </div>
@@ -491,21 +487,21 @@ export default function TeacherDashboardClient({
           </CardContent>
         </Card>
 
-        {/* Recent Attendance History (Shows PRESENT & ABSENT) */}
-        <Card className="border-slate-800 bg-slate-900/60">
-          <CardHeader className="pb-3 p-4 sm:p-6">
-            <CardTitle className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
-              <History className="w-4 h-4 text-indigo-400" /> Recent Attendance History
+        {/* Recent Attendance History */}
+        <Card>
+          <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-5">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History className="w-5 h-5 text-gray-500" /> Attendance History
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {combinedHistory.length === 0 ? (
-              <div className="py-6 px-4 text-center text-xs text-slate-500">
-                No completed or evaluated sessions yet.
+              <div className="py-8 px-4 text-center text-sm text-gray-500">
+                No attendance records found.
               </div>
             ) : (
-              <div className="overflow-x-auto w-full">
-                <Table className="min-w-[480px]">
+              <div className="overflow-x-auto">
+                <Table className="min-w-[500px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Session Title</TableHead>
@@ -517,31 +513,27 @@ export default function TeacherDashboardClient({
                   <TableBody>
                     {combinedHistory.map((a) => (
                       <TableRow key={a.id}>
-                        <TableCell className="font-medium text-white">{a.title}</TableCell>
-                        <TableCell className="text-slate-400 text-xs whitespace-nowrap">
+                        <TableCell className="font-semibold text-gray-900">{a.title}</TableCell>
+                        <TableCell className="font-medium text-gray-600">
                           {new Date(a.sessionDate).toLocaleDateString("en-IN", {
                             day: "2-digit",
                             month: "short",
                             year: "numeric",
                           })}
                         </TableCell>
-                        <TableCell className="text-slate-400 font-mono text-xs whitespace-nowrap">
+                        <TableCell className="font-mono text-sm text-gray-500">
                           {a.markedAt
                             ? new Date(a.markedAt).toLocaleTimeString("en-IN", {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })
-                            : "Expired / Unmarked"}
+                            : "—"}
                         </TableCell>
-                        <TableCell className="text-right whitespace-nowrap">
+                        <TableCell className="text-right">
                           {a.status === "present" ? (
-                            <Badge variant="success" className="text-[10px]">
-                              PRESENT
-                            </Badge>
+                            <Badge variant="success">Present</Badge>
                           ) : (
-                            <Badge variant="destructive" className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/30">
-                              ABSENT
-                            </Badge>
+                            <Badge variant="destructive">Absent</Badge>
                           )}
                         </TableCell>
                       </TableRow>

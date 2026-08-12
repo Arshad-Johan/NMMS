@@ -15,9 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased bg-slate-950 text-slate-100">
+      <body className="font-sans antialiased bg-gray-50 text-gray-900 min-h-screen">
         {children}
-        <Toaster position="top-right" theme="dark" richColors closeButton />
+        <Toaster position="top-right" theme="light" richColors closeButton />
       </body>
     </html>
   );
