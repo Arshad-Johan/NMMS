@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String         @db.VarChar(255)
+  email                String         @unique(map: "users_email_unique") @db.VarChar(255)
+  passwordHash         String         @map("password_hash")
+  role                 Role           @default(admin)
+  createdAt            DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedHeadOfSchools HeadOfSchool[] @relation("HosUpdatedByAdmin")
+  sessions             Session[]
+  updatedTeachers      Teacher[]      @relation("TeacherUpdatedByAdmin")
+
+  @@map("users")
+}
+
+model School {
+  udise             String        @id @db.VarChar(11)
+  name              String        @db.VarChar(500)
+  educationDistrict String?       @map("education_district") @db.VarChar(100)
+  block             String?       @db.VarChar(100)
+  schoolType        SchoolType?   @map("school_type")
+  categoryType      CategoryType? @map("category_type")
+  class8Boys        Int?          @map("class8_boys")
+  class8Girls       Int?          @map("class8_girls")
+  class8Total       Int?          @map("class8_total")
+  willingStudents   Int?          @map("willing_students")
+  isActive          Boolean       @default(true) @map("is_active")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  headOfSchool      HeadOfSchool?
+  teachers          Teacher[]
+
+  @@index([block])
+  @@index([categoryType], map: "schools_category_idx")
+  @@index([educationDistrict])
+  @@map("schools")
+}
+
+model Teacher {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schoolUdise      String       @map("school_udise") @db.VarChar(11)
+  name             String?      @db.VarChar(255)
+  mobile           String       @unique(map: "teachers_mobile_unique") @db.VarChar(15)
+  subject          String?      @db.VarChar(100)
+  isActive         Boolean      @default(true) @map("is_active")
+  lastAdminUpdate  DateTime?    @map("last_admin_update") @db.Timestamptz(6)
+  updatedByAdminId String?      @map("updated_by_admin_id") @db.Uuid
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  attendance       Attendance[]
+  meetLinks        MeetLink[]
+  school           School       @relation(fields: [schoolUdise], references: [udise], onUpdate: NoAction, map: "teachers_school_udise_schools_udise_fk")
+  updatedByAdmin   User?        @relation("TeacherUpdatedByAdmin", fields: [updatedByAdminId], references: [id], onUpdate: NoAction, map: "teachers_updated_by_admin_id_users_id_fk")
+
+  @@index([schoolUdise], map: "teachers_school_idx")
+  @@index([mobile])
+  @@map("teachers")
+}
+
+model HeadOfSchool {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schoolUdise      String    @unique(map: "head_of_schools_school_udise_unique") @map("school_udise") @db.VarChar(11)
+  hosType          HosType?  @map("hos_type")
+  name             String?   @db.VarChar(255)
+  mobile           String?   @db.VarChar(15)
+  email            String?   @db.VarChar(255)
+  lastAdminUpdate  DateTime? @map("last_admin_update") @db.Timestamptz(6)
+  updatedByAdminId String?   @map("updated_by_admin_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  school           School    @relation(fields: [schoolUdise], references: [udise], onDelete: Cascade, onUpdate: NoAction, map: "head_of_schools_school_udise_schools_udise_fk")
+  updatedByAdmin   User?     @relation("HosUpdatedByAdmin", fields: [updatedByAdminId], references: [id], onUpdate: NoAction, map: "head_of_schools_updated_by_admin_id_users_id_fk")
+
+  @@index([schoolUdise], map: "hos_school_idx")
+  @@map("head_of_schools")
+}
+
+model Session {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title             String                @db.VarChar(255)
+  description       String?
+  sessionDate       DateTime              @map("session_date") @db.Date
+  startTime         DateTime?             @map("start_time") @db.Time(6)
+  endTime           DateTime?             @map("end_time") @db.Time(6)
+  /// The general/abstract Google Meet URL uploaded by admin.
+  /// Teachers never see this — they get a personalised slug in meet_links.
+  generalMeetUrl    String                @map("general_meet_url")
+  attendanceOpenAt  DateTime?             @map("attendance_open_at") @db.Timestamptz(6)
+  attendanceCloseAt DateTime?             @map("attendance_close_at") @db.Timestamptz(6)
+  isAttendanceOpen  Boolean               @default(false) @map("is_attendance_open")
+  isPublished       Boolean               @default(false) @map("is_published")
+  createdByAdminId  String                @map("created_by_admin_id") @db.Uuid
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  attendance        Attendance[]
+  meetLinks         MeetLink[]
+  categoryRules     SessionCategoryRule[]
+  createdByAdmin    User                  @relation(fields: [createdByAdminId], references: [id], onUpdate: NoAction, map: "sessions_created_by_admin_id_users_id_fk")
+
+  @@index([sessionDate], map: "sessions_date_idx")
+  @@index([isPublished], map: "sessions_published_idx")
+  @@map("sessions")
+}
+
+model SessionCategoryRule {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId    String       @map("session_id") @db.Uuid
+  categoryType CategoryType @map("category_type")
+  session      Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_category_rules_session_id_sessions_id_fk")
+
+  @@unique([sessionId, categoryType], map: "session_category_unique_idx")
+  @@index([sessionId], map: "session_category_session_idx")
+  @@map("session_category_rules")
+}
+
+model OtpVerification {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mobile    String    @db.VarChar(15)
+  otp       String    @db.VarChar(6)
+  status    OtpStatus @default(pending)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([mobile], map: "otp_mobile_idx")
+  @@index([status], map: "otp_status_idx")
+  @@map("otp_verifications")
+}
+
+model Attendance {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String           @map("session_id") @db.Uuid
+  teacherId String           @map("teacher_id") @db.Uuid
+  status    AttendanceStatus @default(present)
+  markedAt  DateTime?        @map("marked_at") @db.Timestamptz(6)
+  ipAddress String?          @map("ip_address") @db.VarChar(45)
+  remarks   String?
+  session   Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attendance_session_id_sessions_id_fk")
+  teacher   Teacher          @relation(fields: [teacherId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attendance_teacher_id_teachers_id_fk")
+
+  @@unique([sessionId, teacherId], map: "attendance_session_teacher_idx")
+  @@index([sessionId], map: "attendance_session_idx")
+  @@index([teacherId], map: "attendance_teacher_idx")
+  @@map("attendance")
+}
+
+model MeetLink {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId     String    @map("session_id") @db.Uuid
+  teacherId     String    @map("teacher_id") @db.Uuid
+  slug          String    @unique(map: "meet_links_slug_unique") @db.VarChar(32)
+  clickCount    Int       @default(0) @map("click_count")
+  lastClickedAt DateTime? @map("last_clicked_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  session       Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "meet_links_session_id_sessions_id_fk")
+  teacher       Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "meet_links_teacher_id_teachers_id_fk")
+
+  @@unique([sessionId, teacherId], map: "meet_links_session_teacher_idx")
+  @@index([slug])
+  @@index([sessionId], map: "meet_links_session_idx")
+  @@map("meet_links")
+}
+
+enum Role {
+  admin
+  teacher
+
+  @@map("role")
+}
+
+enum SchoolType {
+  Government
+  Aided
+  Corporation
+
+  @@map("school_type")
+}
+
+enum CategoryType {
+  High_School             @map("High School")
+  Higher_Secondary_School @map("Higher Secondary School")
+
+  @@map("category_type")
+}
+
+enum HosType {
+  Head_Master_Principal           @map("Head Master/Principal")
+  Asst_Head_Master_Vice_Principal @map("Asst. Head Master/Vice Principal")
+  Acting_Head_Teacher             @map("Acting Head Teacher")
+  Incharge_from_other_school      @map("Incharge from other school")
+  Incharge_from_Block_District    @map("Incharge from Block/District")
+  Others
+
+  @@map("hos_type")
+}
+
+enum AttendanceStatus {
+  present
+  absent
+
+  @@map("attendance_status")
+}
+
+enum OtpStatus {
+  pending
+  verified
+  expired
+
+  @@map("otp_status")
+}
