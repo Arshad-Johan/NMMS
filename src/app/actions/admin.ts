@@ -163,8 +163,6 @@ export async function createSchoolAction(data: {
         class8Total: data.class8Total ?? 0,
         willingStudents: data.willingStudents ?? 0,
         isActive: data.isActive ?? true,
-        updatedByAdminId: session.id,
-        lastAdminUpdate: new Date(),
       },
     });
     return { success: true };
@@ -193,13 +191,9 @@ export async function updateSchoolAction(
   if (!session || session.role !== "admin") return { error: "Unauthorized." };
 
   try {
-    const updateData: any = { ...data };
-    updateData.updatedByAdminId = session.id;
-    updateData.lastAdminUpdate = new Date();
-
     await prisma.school.update({
       where: { udise },
-      data: updateData,
+      data,
     });
     return { success: true };
   } catch (err: any) {
