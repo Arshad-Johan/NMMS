@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "NMMS Attendance Portal",
   description:
-    "National Means Cum Merit Scholarship Scheme — Teacher Attendance Management System, Tamil Nadu",
+    "National Means Cum Merit Scholarship Scheme — Teacher Attendance Management System",
 };
 
 export default function RootLayout({

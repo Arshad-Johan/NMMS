@@ -538,7 +538,7 @@ export default function AdminDashboardClient({
                 NMMS Admin Portal
               </span>
               <span className="text-xs font-medium tracking-wide text-gray-500 uppercase truncate block">
-                Govt. of Tamil Nadu
+                Admin Dashboard
               </span>
             </div>
           </div>
@@ -1275,7 +1275,7 @@ export default function AdminDashboardClient({
                 </div>
                 <div className="space-y-1.5">
                   <label className="font-semibold text-gray-700">School Name <span className="text-red-500">*</span></label>
-                  <Input required placeholder="Govt Higher Secondary School..." value={newSchoolData.name} onChange={(e) => setNewSchoolData({ ...newSchoolData, name: e.target.value })} />
+                  <Input required placeholder="Higher Secondary School..." value={newSchoolData.name} onChange={(e) => setNewSchoolData({ ...newSchoolData, name: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">

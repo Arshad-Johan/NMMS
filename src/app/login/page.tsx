@@ -187,7 +187,7 @@ export default function LoginPage() {
               NMMS Portal
             </div>
             <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-              Govt. of Tamil Nadu
+              Attendance Portal
             </div>
           </div>
         </div>
@@ -220,7 +220,7 @@ export default function LoginPage() {
             </div>
             <div>
               <div className="font-bold text-xl tracking-tight text-gray-900">NMMS Portal</div>
-              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Govt. of Tamil Nadu</div>
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Attendance Portal</div>
             </div>
           </div>
 
