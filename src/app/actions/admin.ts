@@ -25,7 +25,7 @@ export async function createTeacherAction(data: {
   schoolUdise: string;
   subject?: string;
   isActive?: boolean;
-}): Promise<{ success?: true; error?: string }> {
+}): Promise<{ success?: true; createdTeacher?: any; error?: string }> {
   const session = await getSession();
   if (!session || session.role !== "admin") return { error: "Unauthorized." };
 
@@ -47,7 +47,7 @@ export async function createTeacherAction(data: {
   }
 
   try {
-    await prisma.teacher.create({
+    const createdTeacher = await prisma.teacher.create({
       data: {
         name: data.name,
         mobile: cleanedMobile,
@@ -58,7 +58,14 @@ export async function createTeacherAction(data: {
         lastAdminUpdate: new Date(),
       },
     });
-    return { success: true };
+    return {
+      success: true,
+      createdTeacher: {
+        ...createdTeacher,
+        createdAt: createdTeacher.createdAt.toISOString(),
+        lastAdminUpdate: createdTeacher.lastAdminUpdate ? createdTeacher.lastAdminUpdate.toISOString() : null,
+      },
+    };
   } catch (err: any) {
     if (err.code === "P2002") return { error: "A teacher with this mobile number already exists." };
     if (err.code === "P2003") return { error: `School UDISE "${targetUdise}" does not exist in Schools Directory.` };
@@ -417,6 +424,48 @@ export async function exportAttendanceExcelAction(
     };
   } catch (err: any) {
     console.error("exportAttendanceExcelAction error:", err);
+    return { error: err.message ?? "Export failed." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. EXPORT TRAINERS LIST
+// ---------------------------------------------------------------------------
+
+export async function exportTrainersExcelAction(): Promise<{ base64?: string; filename?: string; count?: number; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    const trainers = await prisma.teacher.findMany({
+      include: { school: true },
+      orderBy: { name: "asc" },
+    });
+
+    const excelData = trainers.map((t, idx) => ({
+      "S.No": idx + 1,
+      "Trainer Name": t.name ?? "Unassigned",
+      "Mobile Number": t.mobile,
+      "Role / Subject": t.subject ?? "NMMS Incharge",
+      "School Name": t.school?.name ?? "N/A",
+      "UDISE Code": t.schoolUdise,
+      "Block": t.school?.block ?? "N/A",
+      "District": t.school?.educationDistrict ?? "N/A",
+      "School Category": t.school?.categoryType ? t.school.categoryType.replace("_", " ") : "N/A",
+      "Status": t.isActive ? "Active" : "Inactive",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "NMMS Trainers");
+
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const base64 = buffer.toString("base64");
+    const filename = `NMMS_Trainers_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    return { base64, filename, count: trainers.length };
+  } catch (err: any) {
+    console.error("exportTrainersExcelAction error:", err);
     return { error: err.message ?? "Export failed." };
   }
 }

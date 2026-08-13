@@ -17,6 +17,7 @@ import {
   markAttendanceAction,
   deleteAttendanceAction,
   exportAttendanceExcelAction,
+  exportTrainersExcelAction,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -389,11 +390,15 @@ export default function AdminDashboardClient({
     startTransition(async () => {
       const res = await createTeacherAction(newTeacherData);
       if (res.error) {
-        toast.error(`Failed to add teacher: ${res.error}`);
+        toast.error(`Failed to add trainer: ${res.error}`);
       } else {
-        toast.success("Teacher registered successfully!");
+        toast.success("Trainer registered successfully!");
         setIsAddTeacherOpen(false);
         setNewTeacherData({ name: "", mobile: "", schoolUdise: "", subject: "NMMS Incharge", isActive: true });
+        // Immediately update local state so search works without refresh
+        if (res.createdTeacher) {
+          setTeachers((prev) => [...prev, res.createdTeacher]);
+        }
         router.refresh();
       }
     });
@@ -519,7 +524,24 @@ export default function AdminDashboardClient({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(`Downloaded ${status.toUpperCase()} Teachers Excel for "${title}" (${res.count} records)!`);
+        toast.success(`Downloaded ${status.toUpperCase()} Trainers Excel for "${title}" (${res.count} records)!`);
+      }
+    });
+  }
+
+  function handleExportTrainersExcel() {
+    startTransition(async () => {
+      const res = await exportTrainersExcelAction();
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Downloaded NMMS Trainers list (${res.count} records)!`);
       }
     });
   }
@@ -578,7 +600,7 @@ export default function AdminDashboardClient({
             { id: "overview", label: "Dashboard", icon: Layers },
             { id: "sessions", label: "Sessions", icon: Video },
             { id: "new-session", label: "New Session", icon: Plus },
-            { id: "teachers", label: "Teachers", icon: Users },
+            { id: "teachers", label: "NMMS Trainers", icon: Users },
             { id: "schools", label: "Schools", icon: SchoolIcon },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -958,8 +980,8 @@ export default function AdminDashboardClient({
           <div className="space-y-6 animate-fade-up">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Teachers Directory</h2>
-                <p className="text-sm text-gray-500">Manage registered teachers ({filteredTeachers.length} total).</p>
+                <h2 className="text-lg font-bold text-gray-900">NMMS Trainers Directory</h2>
+                <p className="text-sm text-gray-500">Manage registered trainers ({filteredTeachers.length} total).</p>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                 <div className="relative w-full sm:w-64">
@@ -974,8 +996,16 @@ export default function AdminDashboardClient({
                     className="pl-9 h-9"
                   />
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={handleExportTrainersExcel}
+                  disabled={isPending}
+                  className="gap-2 h-9 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                >
+                  <FileSpreadsheet className="w-4 h-4" /> Download Excel
+                </Button>
                 <Button onClick={() => setIsAddTeacherOpen(true)} className="gap-2 h-9">
-                  <UserPlus className="w-4 h-4" /> Add Teacher
+                  <UserPlus className="w-4 h-4" /> Add Trainer
                 </Button>
               </div>
             </div>
@@ -990,15 +1020,14 @@ export default function AdminDashboardClient({
                         <TableHead>Mobile</TableHead>
                         <TableHead>School UDISE</TableHead>
                         <TableHead>Subject</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedTeachers.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                            No teachers match your search.
+                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                            No trainers match your search.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1008,11 +1037,6 @@ export default function AdminDashboardClient({
                             <TableCell className="font-mono text-sm text-gray-600">+91 {t.mobile}</TableCell>
                             <TableCell className="font-mono text-sm text-gray-600">{t.schoolUdise}</TableCell>
                             <TableCell className="text-gray-600">{t.subject ?? "NMMS Incharge"}</TableCell>
-                            <TableCell>
-                              <Badge variant={t.isActive ? "success" : "secondary"}>
-                                {t.isActive ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <Button size="icon" variant="ghost" onClick={() => setEditingTeacher({ ...t })} className="h-8 w-8 text-gray-500">
@@ -1188,7 +1212,7 @@ export default function AdminDashboardClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md shadow-2xl border-0">
             <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-lg">Register Teacher</CardTitle>
+              <CardTitle className="text-lg">Register Trainer</CardTitle>
               <button onClick={() => setIsAddTeacherOpen(false)} className="text-gray-400 hover:text-gray-700">
                 <X className="w-5 h-5" />
               </button>
@@ -1196,7 +1220,7 @@ export default function AdminDashboardClient({
             <CardContent className="pt-6">
               <form onSubmit={handleAddTeacher} className="space-y-4 text-sm">
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-gray-700">Teacher Name <span className="text-red-500">*</span></label>
+                  <label className="font-semibold text-gray-700">Trainer Name <span className="text-red-500">*</span></label>
                   <Input required placeholder="e.g. K. Arulmozhi" value={newTeacherData.name} onChange={(e) => setNewTeacherData({ ...newTeacherData, name: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
