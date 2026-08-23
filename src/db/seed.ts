@@ -62,7 +62,8 @@ function normalizeCategoryType(v: unknown): CategoryType | null {
   const s = clean(v)?.toLowerCase() ?? "";
   if (s.includes("higher") || s.includes("hr sec"))
     return CategoryType.Higher_Secondary_School;
-  if (s.includes("high")) return CategoryType.High_School;
+  if (s.includes("high") && !s.includes("higher")) return CategoryType.High_School;
+  if (s.includes("middle")) return CategoryType.Middle_School;
   return null;
 }
 
@@ -266,6 +267,109 @@ async function seedHosFile(filePath: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Seed NMMS INCHARGE file (flat format: Teacher Name, Mobile Number, etc.)
+// ---------------------------------------------------------------------------
+
+async function seedInchargeFile(filePath: string) {
+  const wb = XLSX.readFile(filePath);
+  const sheetName = wb.SheetNames[0]; // Use whatever the first sheet is
+  const ws = wb.Sheets[sheetName];
+  if (!ws) throw new Error(`No sheet found in ${filePath}`);
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, {
+    defval: null,
+  });
+  console.log(`  Found ${rows.length} rows in ${path.basename(filePath)} (sheet: ${sheetName})`);
+
+  type SchoolData = {
+    udise: string;
+    name: string;
+    educationDistrict: string | null;
+    block: string | null;
+    categoryType: CategoryType | null;
+  };
+
+  type TeacherData = {
+    schoolUdise: string;
+    name: string | null;
+    mobile: string;
+    subject: string | null;
+  };
+
+  const schoolMap = new Map<string, SchoolData>();
+  const teacherMap = new Map<string, TeacherData>();
+
+  for (const row of rows) {
+    const udise = clean(row["UDISE Code"]);
+    const schoolName = clean(row["School Name"])?.replace(/\r\n/g, " ").replace(/\s+/g, " ").trim() ?? null;
+    if (!udise || !schoolName) continue;
+
+    schoolMap.set(udise, {
+      udise,
+      name: schoolName,
+      educationDistrict: clean(row["District"]),
+      block: normalizeBlock(row["Block"]),
+      categoryType: normalizeCategoryType(row["School Category"]),
+    });
+
+    const mobile = cleanMobile(row["Mobile Number"]);
+    if (mobile) {
+      teacherMap.set(mobile, {
+        schoolUdise: udise,
+        name: clean(row["Teacher Name"]),
+        mobile,
+        subject: clean(row["Subject / Role"]),
+      });
+    }
+  }
+
+  const schoolList = [...schoolMap.values()];
+  const teacherList = [...teacherMap.values()];
+
+  // Upsert schools
+  console.log(`  Upserting ${schoolList.length} schools...`);
+  for (const batch of chunks(schoolList, BATCH_SIZE)) {
+    await Promise.all(
+      batch.map((s) =>
+        prisma.school.upsert({
+          where: { udise: s.udise },
+          create: {
+            udise: s.udise,
+            name: s.name,
+            educationDistrict: s.educationDistrict,
+            block: s.block,
+            categoryType: s.categoryType,
+          },
+          update: {
+            block: s.block,
+            categoryType: s.categoryType,
+          },
+        })
+      )
+    );
+  }
+  console.log(`  ✓ Schools done.`);
+
+  // Upsert teachers
+  console.log(`  Upserting ${teacherList.length} teachers...`);
+  for (const batch of chunks(teacherList, BATCH_SIZE)) {
+    await Promise.all(
+      batch.map((t) =>
+        prisma.teacher.upsert({
+          where: { mobile: t.mobile },
+          create: t,
+          update: {
+            name: t.name,
+            subject: t.subject,
+            schoolUdise: t.schoolUdise,
+          },
+        })
+      )
+    );
+  }
+  console.log(`  ✓ Teachers done.`);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
@@ -282,6 +386,13 @@ async function main() {
 
   console.log("\n🌱 Seeding Head of Schools data...");
   await seedHosFile(path.join(root, "all school HM & Mobile No (1).xlsx"));
+
+  console.log("\n🌱 Seeding Middle School Incharges...");
+  try {
+    await seedInchargeFile(path.join(root, "NMMS INCHARGE.xlsx"));
+  } catch (e: any) {
+    console.log("Middle school incharge file missing or failed to parse:", e.message);
+  }
 
   console.log("\n✅ Seed complete!");
   await prisma.$disconnect();

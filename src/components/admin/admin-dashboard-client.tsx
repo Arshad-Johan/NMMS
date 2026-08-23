@@ -923,6 +923,7 @@ export default function AdminDashboardClient({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
                         { id: "High_School", label: "High School" },
+                        { id: "Middle_School", label: "Middle School" },
                         { id: "Higher_Secondary_School", label: "Higher Secondary School" },
                       ].map((cat) => {
                         const isSelected = selectedCategories.includes(cat.id as CategoryType);
@@ -1144,7 +1145,8 @@ export default function AdminDashboardClient({
                               >
                                 <option value="">Unspecified</option>
                                 <option value="High_School">High School</option>
-                                <option value="Higher_Secondary_School">Higher Secondary School</option>
+                                <option value="Middle_School">Middle School</option>
+<option value="Higher_Secondary_School">Higher Secondary School</option>
                               </select>
                             </TableCell>
                             <TableCell className="text-right">
@@ -1313,7 +1315,8 @@ export default function AdminDashboardClient({
                   >
                     <option value="">Unspecified</option>
                     <option value="High_School">High School</option>
-                    <option value="Higher_Secondary_School">Higher Secondary School</option>
+                    <option value="Middle_School">Middle School</option>
+<option value="Higher_Secondary_School">Higher Secondary School</option>
                   </select>
                 </div>
                 <Button type="submit" className="w-full mt-2" disabled={isPending}>Save School</Button>
@@ -1356,7 +1359,8 @@ export default function AdminDashboardClient({
                   >
                     <option value="">Unspecified</option>
                     <option value="High_School">High School</option>
-                    <option value="Higher_Secondary_School">Higher Secondary School</option>
+                    <option value="Middle_School">Middle School</option>
+<option value="Higher_Secondary_School">Higher Secondary School</option>
                   </select>
                 </div>
                 <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
