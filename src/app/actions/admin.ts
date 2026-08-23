@@ -1,6 +1,7 @@
 "use server";
 
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { prisma } from "@/db/index";
 import { getSession } from "@/lib/cookies";
 import { CategoryType, SchoolType, AttendanceStatus } from "@prisma/client";
@@ -350,8 +351,7 @@ export async function deleteAttendanceAction(
 }
 
 export async function exportAttendanceExcelAction(
-  sessionId: string,
-  statusFilter: "present" | "absent"
+  sessionId: string
 ): Promise<{ base64?: string; filename?: string; count?: number; error?: string }> {
   const session = await getSession();
   if (!session || session.role !== "admin") return { error: "Unauthorized." };
@@ -381,40 +381,64 @@ export async function exportAttendanceExcelAction(
       orderBy: { name: "asc" },
     });
 
-    const filtered = eligibleTeachers.filter((t) => {
-      const isPresent = t.attendance[0]?.status === "present";
-      return statusFilter === "present" ? isPresent : !isPresent;
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "NMMS Portal";
+    workbook.created = new Date();
+    
+    const sheet = workbook.addWorksheet("Attendance", {
+      properties: { tabColor: { argb: "FF0072C6" } }
     });
+    
+    sheet.columns = [
+      { header: "S.No", key: "sno", width: 8 },
+      { header: "Teacher Name", key: "name", width: 25 },
+      { header: "Mobile Number", key: "mobile", width: 15 },
+      { header: "Subject / Role", key: "subject", width: 20 },
+      { header: "School Name", key: "school", width: 35 },
+      { header: "UDISE Code", key: "udise", width: 15 },
+      { header: "Block", key: "block", width: 20 },
+      { header: "District", key: "district", width: 20 },
+      { header: "School Category", key: "category", width: 25 },
+      { header: "Attendance Status", key: "status", width: 20 },
+      { header: "Marked Time", key: "markedAt", width: 15 },
+    ];
+    
+    sheet.getRow(1).font = { bold: true };
 
-    const excelData = filtered.map((t, idx) => ({
-      "S.No": idx + 1,
-      "Teacher Name": t.name ?? "Unassigned",
-      "Mobile Number": t.mobile,
-      "Subject / Role": t.subject ?? "NMMS Incharge",
-      "School Name": t.school?.name ?? "N/A",
-      "UDISE Code": t.schoolUdise,
-      "Block": t.school?.block ?? "N/A",
-      "District": t.school?.educationDistrict ?? "N/A",
-      "School Category": t.school?.categoryType ? t.school.categoryType.replace("_", " ") : "N/A",
-      "Attendance Status": statusFilter.toUpperCase(),
-      "Marked Time": t.attendance[0]?.markedAt
-        ? new Date(t.attendance[0].markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-        : "N/A",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `${statusFilter.toUpperCase()} Teachers`);
-
-    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-    const base64 = buffer.toString("base64");
+    eligibleTeachers.forEach((t, idx) => {
+      const isPresent = t.attendance[0]?.status === "present";
+      const statusText = isPresent ? "PRESENT" : "ABSENT";
+      
+      const row = sheet.addRow({
+        sno: idx + 1,
+        name: t.name ?? "Unassigned",
+        mobile: t.mobile,
+        subject: t.subject ?? "NMMS Incharge",
+        school: t.school?.name ?? "N/A",
+        udise: t.schoolUdise,
+        block: t.school?.block ?? "N/A",
+        district: t.school?.educationDistrict ?? "N/A",
+        category: t.school?.categoryType ? t.school.categoryType.replace("_", " ") : "N/A",
+        status: statusText,
+        markedAt: t.attendance[0]?.markedAt
+          ? new Date(t.attendance[0].markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+          : "N/A"
+      });
+      
+      const statusCell = row.getCell("status");
+      statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: isPresent ? "FFC6EFCE" : "FFFFC7CE" } };
+      statusCell.font = { color: { argb: isPresent ? "FF006100" : "FF9C0006" }, bold: true };
+    });
+    
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
     const safeTitle = targetSession.title.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `NMMS_${safeTitle}_${statusFilter.toUpperCase()}_Teachers.xlsx`;
+    const filename = `NMMS_${safeTitle}_Attendance.xlsx`;
 
     return {
       base64,
       filename,
-      count: filtered.length,
+      count: eligibleTeachers.length,
     };
   } catch (err: any) {
     console.error("exportAttendanceExcelAction error:", err);

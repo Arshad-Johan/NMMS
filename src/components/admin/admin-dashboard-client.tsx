@@ -512,9 +512,9 @@ export default function AdminDashboardClient({
     });
   }
 
-  function handleExportSessionExcel(sessionId: string, title: string, status: "present" | "absent") {
+  function handleExportSessionExcel(sessionId: string, title: string) {
     startTransition(async () => {
-      const res = await exportAttendanceExcelAction(sessionId, status);
+      const res = await exportAttendanceExcelAction(sessionId);
       if (res.error || !res.base64 || !res.filename) {
         toast.error(`Export failed: ${res.error}`);
       } else {
@@ -740,20 +740,11 @@ export default function AdminDashboardClient({
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleExportSessionExcel(s.id, s.title, "present")}
+                                  onClick={() => handleExportSessionExcel(s.id, s.title)}
                                   disabled={isPending}
                                   className="h-8 text-xs font-semibold"
                                 >
-                                  Present
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleExportSessionExcel(s.id, s.title, "absent")}
-                                  disabled={isPending}
-                                  className="h-8 text-xs font-semibold"
-                                >
-                                  Absent
+                                  <Download className="w-3 h-3 mr-1" /> Export
                                 </Button>
                               </div>
                             </TableCell>
@@ -845,20 +836,11 @@ export default function AdminDashboardClient({
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleExportSessionExcel(s.id, s.title, "present")}
+                                  onClick={() => handleExportSessionExcel(s.id, s.title)}
                                   disabled={isPending}
                                   className="h-8 text-xs font-semibold"
                                 >
-                                  <Download className="w-3 h-3 mr-1" /> Present
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleExportSessionExcel(s.id, s.title, "absent")}
-                                  disabled={isPending}
-                                  className="h-8 text-xs font-semibold"
-                                >
-                                  <Download className="w-3 h-3 mr-1" /> Absent
+                                  <Download className="w-3 h-3 mr-1" /> Export Excel
                                 </Button>
                               </div>
                             </TableCell>
