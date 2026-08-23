@@ -242,6 +242,7 @@ export default function AdminDashboardClient({
   const [teacherSearch, setTeacherSearch] = useState("");
   const [schoolSearch, setSchoolSearch] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [exportingSessionId, setExportingSessionId] = useState<string | null>(null);
 
   // Pagination States
   const [teacherPage, setTeacherPage] = useState(1);
@@ -513,10 +514,12 @@ export default function AdminDashboardClient({
   }
 
   function handleExportSessionExcel(sessionId: string, title: string) {
+    setExportingSessionId(sessionId);
     startTransition(async () => {
       const res = await exportAttendanceExcelAction(sessionId);
       if (res.error || !res.base64 || !res.filename) {
         toast.error(`Export failed: ${res.error}`);
+        setExportingSessionId(null);
       } else {
         const link = document.createElement("a");
         link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
@@ -739,12 +742,16 @@ export default function AdminDashboardClient({
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                                   onClick={() => handleExportSessionExcel(s.id, s.title)}
-                                  disabled={isPending}
-                                  className="h-8 text-xs font-semibold"
+                                  disabled={exportingSessionId === s.id}
                                 >
-                                  <Download className="w-3 h-3 mr-1" /> Export
+                                  {exportingSessionId === s.id ? (
+                                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Download className="w-3 h-3 mr-1" />
+                                  )}
+                                  Export
                                 </Button>
                               </div>
                             </TableCell>
@@ -835,12 +842,16 @@ export default function AdminDashboardClient({
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                                   onClick={() => handleExportSessionExcel(s.id, s.title)}
-                                  disabled={isPending}
-                                  className="h-8 text-xs font-semibold"
+                                  disabled={exportingSessionId === s.id}
                                 >
-                                  <Download className="w-3 h-3 mr-1" /> Export Excel
+                                  {exportingSessionId === s.id ? (
+                                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Download className="w-3 h-3 mr-1" />
+                                  )}
+                                  Export Excel
                                 </Button>
                               </div>
                             </TableCell>
