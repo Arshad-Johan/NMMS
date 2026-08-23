@@ -3,16 +3,12 @@
 import { prisma } from "@/db/index";
 import { signToken, verifyPassword } from "@/lib/auth";
 import { setSessionCookie, clearSessionCookie } from "@/lib/cookies";
-import { sendSmsOtp } from "@/lib/sms";
-
-function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { checkAndSetDeviceLock } from "@/lib/device";
 
 // ---------------------------------------------------------------------------
-// Send OTP
+// Login Action (Direct login without OTP, but locked to device)
 // ---------------------------------------------------------------------------
-export async function sendOtpAction(
+export async function loginWithMobileAction(
   mobile: string
 ): Promise<{ success?: true; error?: string }> {
   const cleaned = mobile.replace(/\D/g, "").slice(-10);
@@ -22,93 +18,20 @@ export async function sendOtpAction(
 
   const teacher = await prisma.teacher.findUnique({
     where: { mobile: cleaned },
-    select: { id: true, isActive: true },
+    select: { id: true, name: true, mobile: true, isActive: true },
   });
 
   if (!teacher || !teacher.isActive) {
-    return { error: "Number not registered. Contact your administrator." };
+    return { error: "Number not registered in NMMS. Contact your administrator." };
   }
 
-  // Expire any existing pending OTPs for this mobile
-  await prisma.otpVerification.updateMany({
-    where: { mobile: cleaned, status: "pending" },
-    data: { status: "expired" },
-  });
-
-  const otp = generateOtp();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-
-  await prisma.otpVerification.create({
-    data: { mobile: cleaned, otp, expiresAt },
-  });
-
-  // Always log OTP in server console for instant developer verification
-  console.log(`\n[OTP GENERATED] Mobile: ${cleaned} | Code: ${otp} (valid 10 min)\n`);
-
-  // Dispatch SMS OTP via configured SMS Gateway
-  const smsRes = await sendSmsOtp(cleaned, otp);
-  if (!smsRes.success) {
-    console.warn(`[SMS Gateway Notice] Mobile: ${cleaned} | Error: ${smsRes.error}`);
+  // Check device lock
+  const deviceCheck = await checkAndSetDeviceLock(cleaned);
+  if (!deviceCheck.allowed) {
+    return { error: deviceCheck.error };
   }
 
-  return { success: true };
-}
-
-// ---------------------------------------------------------------------------
-// Verify OTP (Supports Role Parameter)
-// ---------------------------------------------------------------------------
-export async function verifyOtpAction(
-  mobile: string,
-  otp: string,
-  targetRole: "teacher" | "admin" = "teacher"
-): Promise<{ success?: true; error?: string; role?: "teacher" | "admin" }> {
-  const cleaned = mobile.replace(/\D/g, "").slice(-10);
-
-  const record = await prisma.otpVerification.findFirst({
-    where: {
-      mobile: cleaned,
-      status: "pending",
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!record) {
-    return { error: "OTP expired or not found. Request a new one." };
-  }
-
-  if (record.attempts >= 3) {
-    await prisma.otpVerification.update({
-      where: { id: record.id },
-      data: { status: "expired" },
-    });
-    return { error: "Too many wrong attempts. Request a new OTP." };
-  }
-
-  if (record.otp !== otp) {
-    await prisma.otpVerification.update({
-      where: { id: record.id },
-      data: { attempts: { increment: 1 } },
-    });
-    const remaining = 2 - record.attempts;
-    return { error: `Wrong OTP. ${remaining} attempt${remaining === 1 ? "" : "s"} left.` };
-  }
-
-  // Mark verified
-  await prisma.otpVerification.update({
-    where: { id: record.id },
-    data: { status: "verified" },
-  });
-
-  // Fetch teacher details
-  const teacher = await prisma.teacher.findUnique({
-    where: { mobile: cleaned },
-    select: { id: true, name: true, mobile: true },
-  });
-
-  if (!teacher) return { error: "Teacher record not found." };
-
-  const roleToAssign = targetRole === "admin" ? "admin" : "teacher";
+  const roleToAssign = "teacher";
 
   const token = signToken({
     id: teacher.id,
@@ -119,7 +42,7 @@ export async function verifyOtpAction(
   });
 
   await setSessionCookie(token);
-  return { success: true, role: roleToAssign };
+  return { success: true };
 }
 
 // ---------------------------------------------------------------------------

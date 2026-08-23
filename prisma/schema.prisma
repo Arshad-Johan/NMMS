@@ -121,19 +121,6 @@ model SessionCategoryRule {
   @@map("session_category_rules")
 }
 
-model OtpVerification {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  mobile    String    @db.VarChar(15)
-  otp       String    @db.VarChar(6)
-  status    OtpStatus @default(pending)
-  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
-  attempts  Int       @default(0)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@index([mobile], map: "otp_mobile_idx")
-  @@index([status], map: "otp_status_idx")
-  @@map("otp_verifications")
-}
 
 model Attendance {
   id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -207,12 +194,4 @@ enum AttendanceStatus {
   absent
 
   @@map("attendance_status")
-}
-
-enum OtpStatus {
-  pending
-  verified
-  expired
-
-  @@map("otp_status")
 }
