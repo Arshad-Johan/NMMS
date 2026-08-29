@@ -49,6 +49,7 @@ interface TeacherDashboardClientProps {
       block: string | null;
       educationDistrict: string | null;
       categoryType: string | null;
+      management?: string | null;
     };
   };
   stats: {
@@ -253,7 +254,7 @@ export default function TeacherDashboardClient({
                   {teacher.name ?? "Teacher"}
                 </div>
                 <div className="text-xs text-gray-500 font-medium">
-                  +91 {teacher.mobile}
+                  UDISE: {teacher.schoolUdise}
                 </div>
               </div>
             </div>
@@ -297,10 +298,15 @@ export default function TeacherDashboardClient({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 pt-2 md:pt-0">
+            <div className="flex flex-wrap gap-2 pt-2 md:pt-0">
               {teacher.school.categoryType && (
-                <Badge variant="outline" className="bg-gray-50 text-gray-700 w-fit">
+                <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 w-fit">
                   {teacher.school.categoryType.replace("_", " ")}
+                </Badge>
+              )}
+              {teacher.school.management && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 w-fit">
+                  {teacher.school.management}
                 </Badge>
               )}
               {teacher.school.block && (

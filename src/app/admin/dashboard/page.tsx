@@ -7,42 +7,28 @@ export default async function AdminDashboardPage() {
   const session = await getSession();
   if (!session || session.role !== "admin") redirect("/login");
 
-  // Fetch initial stats & full data for the Admin Dashboard (All schools & teachers)
+  // Fetch initial stats & full data for the Admin Dashboard
   const [
     totalSchools,
-    totalTeachers,
     totalSessions,
     totalAttendance,
     presentAttendance,
     sessions,
-    teachers,
     schools,
     recentAttendance,
+    rawManagements,
   ] = await Promise.all([
     prisma.school.count(),
-    prisma.teacher.count(),
     prisma.session.count(),
     prisma.attendance.count(),
     prisma.attendance.count({ where: { status: "present" } }),
     prisma.session.findMany({
       include: {
         categoryRules: true,
+        managementRules: true,
         _count: { select: { attendance: true, meetLinks: true } },
       },
       orderBy: { createdAt: "desc" },
-    }),
-    prisma.teacher.findMany({
-      include: {
-        school: {
-          select: {
-            name: true,
-            block: true,
-            educationDistrict: true,
-            categoryType: true,
-          },
-        },
-      },
-      orderBy: { name: "asc" },
     }),
     prisma.school.findMany({
       orderBy: { name: "asc" },
@@ -55,7 +41,17 @@ export default async function AdminDashboardPage() {
       orderBy: { markedAt: "desc" },
       take: 100,
     }),
+    prisma.school.findMany({
+      where: { management: { not: null } },
+      select: { management: true },
+      distinct: ["management"],
+      orderBy: { management: "asc" },
+    }),
   ]);
+
+  const availableManagements = rawManagements
+    .map((m) => m.management)
+    .filter((m): m is string => Boolean(m));
 
   const overallRate =
     totalAttendance > 0 ? Math.round((presentAttendance / totalAttendance) * 100) : 0;
@@ -65,9 +61,9 @@ export default async function AdminDashboardPage() {
   return (
     <AdminDashboardClient
       adminName={adminName}
+      availableManagements={availableManagements}
       stats={{
         totalSchools,
-        totalTeachers,
         totalSessions,
         overallRate,
       }}
@@ -77,10 +73,6 @@ export default async function AdminDashboardPage() {
         startTime: s.startTime ? s.startTime.toISOString() : null,
         endTime: s.endTime ? s.endTime.toISOString() : null,
         createdAt: s.createdAt.toISOString(),
-      }))}
-      initialTeachers={teachers.map((t) => ({
-        ...t,
-        createdAt: t.createdAt.toISOString(),
       }))}
       initialSchools={schools.map((sc) => ({
         ...sc,

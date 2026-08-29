@@ -24,9 +24,12 @@ model User {
 model School {
   udise             String        @id @db.VarChar(11)
   name              String        @db.VarChar(500)
+  district          String?       @db.VarChar(100)
   educationDistrict String?       @map("education_district") @db.VarChar(100)
   block             String?       @db.VarChar(100)
-  schoolType        SchoolType?   @map("school_type")
+  schoolType        String?       @map("school_type") @db.VarChar(100)
+  management        String?       @map("management") @db.VarChar(150)
+  category          String?       @map("category") @db.VarChar(100)
   categoryType      CategoryType? @map("category_type")
   class8Boys        Int?          @map("class8_boys")
   class8Girls       Int?          @map("class8_girls")
@@ -40,6 +43,7 @@ model School {
 
   @@index([block])
   @@index([categoryType], map: "schools_category_idx")
+  @@index([management], map: "schools_management_idx")
   @@index([educationDistrict])
   @@map("schools")
 }
@@ -103,6 +107,7 @@ model Session {
   attendance        Attendance[]
   meetLinks         MeetLink[]
   categoryRules     SessionCategoryRule[]
+  managementRules   SessionManagementRule[]
   createdByAdmin    User                  @relation(fields: [createdByAdminId], references: [id], onUpdate: NoAction, map: "sessions_created_by_admin_id_users_id_fk")
 
   @@index([sessionDate], map: "sessions_date_idx")
@@ -119,6 +124,17 @@ model SessionCategoryRule {
   @@unique([sessionId, categoryType], map: "session_category_unique_idx")
   @@index([sessionId], map: "session_category_session_idx")
   @@map("session_category_rules")
+}
+
+model SessionManagementRule {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId  String   @map("session_id") @db.Uuid
+  management String   @map("management") @db.VarChar(150)
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_management_rules_session_id_sessions_id_fk")
+
+  @@unique([sessionId, management], map: "session_management_unique_idx")
+  @@index([sessionId], map: "session_management_session_idx")
+  @@map("session_management_rules")
 }
 
 
@@ -172,9 +188,11 @@ enum SchoolType {
 }
 
 enum CategoryType {
+  Primary_School          @map("Primary School")
+  Middle_School           @map("Middle School")
   High_School             @map("High School")
   Higher_Secondary_School @map("Higher Secondary School")
-  Middle_School           @map("Middle School")
+  Pre_Primary_School      @map("Pre-Primary School")
 
   @@map("category_type")
 }

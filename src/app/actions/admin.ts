@@ -14,6 +14,7 @@ export interface CreateSessionInput {
   endTime?: string;    // HH:mm (24hr format)
   generalMeetUrl: string;
   categoryTypes: CategoryType[];
+  managements?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -134,14 +135,13 @@ export async function deleteTeacherAction(teacherId: string): Promise<{ success?
 export async function createSchoolAction(data: {
   udise: string;
   name: string;
+  district?: string;
   educationDistrict?: string;
   block?: string;
-  schoolType?: SchoolType;
+  schoolType?: string;
+  management?: string;
+  category?: string;
   categoryType?: CategoryType | null;
-  class8Boys?: number;
-  class8Girls?: number;
-  class8Total?: number;
-  willingStudents?: number;
   isActive?: boolean;
 }): Promise<{ success?: true; error?: string }> {
   const session = await getSession();
@@ -155,14 +155,13 @@ export async function createSchoolAction(data: {
       data: {
         udise: cleanUdise,
         name: data.name.trim(),
-        educationDistrict: data.educationDistrict ?? "Madurai",
+        district: data.district ?? "MADURAI",
+        educationDistrict: data.educationDistrict ?? null,
         block: data.block ?? null,
-        schoolType: data.schoolType ?? "Government",
+        schoolType: data.schoolType ?? null,
+        management: data.management ?? null,
+        category: data.category ?? null,
         categoryType: data.categoryType ?? null,
-        class8Boys: data.class8Boys ?? 0,
-        class8Girls: data.class8Girls ?? 0,
-        class8Total: data.class8Total ?? 0,
-        willingStudents: data.willingStudents ?? 0,
         isActive: data.isActive ?? true,
       },
     });
@@ -177,14 +176,13 @@ export async function updateSchoolAction(
   udise: string,
   data: {
     name?: string;
+    district?: string;
     educationDistrict?: string;
     block?: string;
-    schoolType?: SchoolType;
+    schoolType?: string;
+    management?: string;
+    category?: string;
     categoryType?: CategoryType | null;
-    class8Boys?: number;
-    class8Girls?: number;
-    class8Total?: number;
-    willingStudents?: number;
     isActive?: boolean;
   }
 ): Promise<{ success?: true; error?: string }> {
@@ -242,11 +240,15 @@ export async function createSessionAction(
         isAttendanceOpen: true,
         createdByAdminId: session.id,
         categoryRules: {
-          create: input.categoryTypes.map((categoryType) => ({ categoryType })),
+          create: (input.categoryTypes || []).map((categoryType) => ({ categoryType })),
+        },
+        managementRules: {
+          create: (input.managements || []).map((management) => ({ management })),
         },
       },
       include: {
         categoryRules: true,
+        managementRules: true,
       },
     });
 
@@ -359,17 +361,21 @@ export async function exportAttendanceExcelAction(
   try {
     const targetSession = await prisma.session.findUnique({
       where: { id: sessionId },
-      include: { categoryRules: true },
+      include: { categoryRules: true, managementRules: true },
     });
 
     if (!targetSession) return { error: "Session not found." };
 
     const categoryTypes = targetSession.categoryRules.map((r) => r.categoryType);
+    const managements = targetSession.managementRules.map((r) => r.management);
 
     const eligibleTeachers = await prisma.teacher.findMany({
       where: {
         isActive: true,
-        school: categoryTypes.length > 0 ? { categoryType: { in: categoryTypes } } : undefined,
+        school: {
+          ...(categoryTypes.length > 0 ? { categoryType: { in: categoryTypes } } : {}),
+          ...(managements.length > 0 ? { management: { in: managements } } : {}),
+        },
       },
       include: {
         school: true,
@@ -412,7 +418,7 @@ export async function exportAttendanceExcelAction(
       const row = sheet.addRow({
         sno: idx + 1,
         name: t.name ?? "Unassigned",
-        mobile: t.mobile,
+        mobile: t.mobile.replace("UD_", ""),
         subject: t.subject ?? "NMMS Incharge",
         school: t.school?.name ?? "N/A",
         udise: t.schoolUdise,

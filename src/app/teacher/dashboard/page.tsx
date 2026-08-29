@@ -17,6 +17,7 @@ export default async function TeacherDashboard() {
           block: true,
           educationDistrict: true,
           categoryType: true,
+          management: true,
         },
       },
     },
@@ -26,6 +27,7 @@ export default async function TeacherDashboard() {
 
   const teacherId = teacher.id;
   const categoryType = teacher.school.categoryType;
+  const management = teacher.school.management;
 
   // 1. Fetch Stats
   const totalAttendance = await prisma.attendance.count({
@@ -44,11 +46,19 @@ export default async function TeacherDashboard() {
   const sessions = await prisma.session.findMany({
     where: {
       isPublished: true,
-      OR: [
-        { categoryRules: { none: {} } },
-        ...(categoryType
-          ? [{ categoryRules: { some: { categoryType } } }]
-          : []),
+      AND: [
+        {
+          OR: [
+            { categoryRules: { none: {} } },
+            ...(categoryType ? [{ categoryRules: { some: { categoryType } } }] : []),
+          ],
+        },
+        {
+          OR: [
+            { managementRules: { none: {} } },
+            ...(management ? [{ managementRules: { some: { management } } }] : []),
+          ],
+        },
       ],
     },
     include: {

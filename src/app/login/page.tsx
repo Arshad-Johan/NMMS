@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  loginWithMobileAction,
+  loginWithUdiseAction,
   adminPasswordLoginAction,
 } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -25,30 +25,31 @@ type LoginMode = "teacher" | "admin";
 export default function LoginPage() {
   const router = useRouter();
   const [loginMode, setLoginMode] = useState<LoginMode>("teacher");
-  const [mobile, setMobile] = useState("");
+  const [udise, setUdise] = useState("");
   const [adminEmail, setAdminEmail] = useState("admin@nmms.local");
   const [adminPassword, setAdminPassword] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const mobileRef = useRef<HTMLInputElement>(null);
+  const udiseRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    mobileRef.current?.focus();
+    udiseRef.current?.focus();
   }, [loginMode]);
 
   function handleLoginSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (mobile.length !== 10) {
-      setError("Please enter a valid 10-digit mobile number.");
+    const cleaned = udise.trim().replace(/\D/g, "");
+    if (!cleaned || cleaned.length < 8 || cleaned.length > 11) {
+      setError("Please enter a valid 11-digit UDISE code.");
       return;
     }
 
     startTransition(async () => {
       try {
-        const res = await loginWithMobileAction(mobile);
+        const res = await loginWithUdiseAction(cleaned);
         if (res?.error) {
           setError(res.error);
         } else {
@@ -182,36 +183,33 @@ export default function LoginPage() {
               </div>
               <CardDescription className="text-gray-500 font-normal text-sm mt-1.5">
                 {loginMode === "teacher"
-                  ? "Enter your 10-digit registered mobile number to continue. Note: Logging in restricts this device to this number."
+                  ? "Enter your 11-digit School UDISE code to continue. Note: Logging in restricts this device to this UDISE code today."
                   : "Sign in with admin credentials"}
               </CardDescription>
             </div>
 
             <CardContent className="p-4 sm:p-6 bg-white">
               {loginMode === "teacher" ? (
-                /* Mobile Flow (Works for Teacher) */
+                /* UDISE Flow (Works for Teacher) */
                 <form onSubmit={handleLoginSubmit} className="space-y-5" noValidate>
                   <div className="space-y-1.5">
-                    <label htmlFor="mobile-input" className="text-xs font-semibold text-gray-700">
-                      Mobile Number
+                    <label htmlFor="udise-input" className="text-xs font-semibold text-gray-700">
+                      School UDISE Code
                     </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-3 font-medium text-gray-500 pointer-events-none">
-                        +91
-                      </div>
                       <Input
-                        ref={mobileRef}
-                        id="mobile-input"
+                        ref={udiseRef}
+                        id="udise-input"
                         type="tel"
                         inputMode="numeric"
-                        placeholder="00000 00000"
-                        value={mobile}
+                        placeholder="e.g. 33240100101"
+                        value={udise}
                         onChange={(e) => {
                           setError("");
-                          setMobile(e.target.value.replace(/\D/g, "").slice(0, 10));
+                          setUdise(e.target.value.replace(/\D/g, "").slice(0, 11));
                         }}
-                        maxLength={10}
-                        className="pl-12 font-medium text-base h-11 bg-white border-gray-300"
+                        maxLength={11}
+                        className="font-medium text-base h-11 bg-white border-gray-300 tracking-wider"
                         required
                       />
                     </div>
@@ -227,7 +225,7 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     className="w-full h-11 text-sm font-semibold mt-2"
-                    disabled={isPending || mobile.length < 10}
+                    disabled={isPending || udise.trim().length < 8}
                   >
                     {isPending ? (
                       <>
