@@ -15,6 +15,7 @@ export interface CreateSessionInput {
   generalMeetUrl: string;
   categoryTypes: CategoryType[];
   managements?: string[];
+  blocks?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -245,10 +246,14 @@ export async function createSessionAction(
         managementRules: {
           create: (input.managements || []).map((management) => ({ management })),
         },
+        blockRules: {
+          create: (input.blocks || []).map((block) => ({ block })),
+        },
       },
       include: {
         categoryRules: true,
         managementRules: true,
+        blockRules: true,
       },
     });
 
@@ -300,7 +305,7 @@ export async function deleteSessionAction(sessionId: string): Promise<{ success?
 }
 
 // ---------------------------------------------------------------------------
-// 4. ATTENDANCE & EXCEL EXPORTS
+// 4. ATTENDANCE ACTIONS
 // ---------------------------------------------------------------------------
 
 export async function markAttendanceAction(
@@ -308,21 +313,18 @@ export async function markAttendanceAction(
   teacherId: string,
   status: AttendanceStatus = "present"
 ): Promise<{ success?: true; error?: string }> {
-  const session = await getSession();
-  if (!session || session.role !== "admin") return { error: "Unauthorized." };
-
   try {
     await prisma.attendance.upsert({
       where: {
         sessionId_teacherId: { sessionId, teacherId },
       },
-      create: {
-        sessionId,
-        teacherId,
+      update: {
         status,
         markedAt: new Date(),
       },
-      update: {
+      create: {
+        sessionId,
+        teacherId,
         status,
         markedAt: new Date(),
       },
@@ -361,13 +363,14 @@ export async function exportAttendanceExcelAction(
   try {
     const targetSession = await prisma.session.findUnique({
       where: { id: sessionId },
-      include: { categoryRules: true, managementRules: true },
+      include: { categoryRules: true, managementRules: true, blockRules: true },
     });
 
     if (!targetSession) return { error: "Session not found." };
 
     const categoryTypes = targetSession.categoryRules.map((r) => r.categoryType);
     const managements = targetSession.managementRules.map((r) => r.management);
+    const blocks = targetSession.blockRules.map((r) => r.block);
 
     // Query ALL targeted schools (not teachers) so every school appears in the export
     const eligibleSchools = await prisma.school.findMany({
@@ -375,6 +378,7 @@ export async function exportAttendanceExcelAction(
         isActive: true,
         ...(categoryTypes.length > 0 ? { categoryType: { in: categoryTypes } } : {}),
         ...(managements.length > 0 ? { management: { in: managements } } : {}),
+        ...(blocks.length > 0 ? { block: { in: blocks } } : {}),
       },
       include: {
         teachers: {
@@ -429,7 +433,12 @@ export async function exportAttendanceExcelAction(
         category: sc.categoryType ? sc.categoryType.replace("_", " ") : "N/A",
         status: statusText,
         markedAt: attendanceRecord?.markedAt
-          ? new Date(attendanceRecord.markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+          ? new Date(attendanceRecord.markedAt).toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+              timeZone: "Asia/Kolkata",
+            })
           : "—"
       });
       

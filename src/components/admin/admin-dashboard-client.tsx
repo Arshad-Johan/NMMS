@@ -68,6 +68,7 @@ type Tab = "overview" | "sessions" | "new-session" | "schools";
 interface AdminDashboardProps {
   adminName: string;
   availableManagements?: string[];
+  availableBlocks?: string[];
   stats: {
     totalSchools: number;
     totalSessions: number;
@@ -114,9 +115,9 @@ function isSessionExpired(sessionDateStr: string, endTimeStr?: string | null, st
   if (!sessionDateStr) return false;
   try {
     const sDate = new Date(sessionDateStr);
-    const year = sDate.getUTCFullYear();
-    const month = sDate.getUTCMonth();
-    const day = sDate.getUTCDate();
+    const year = sDate.getFullYear();
+    const month = sDate.getMonth();
+    const day = sDate.getDate();
 
     let endHours = 23;
     let endMinutes = 59;
@@ -144,6 +145,7 @@ function isSessionExpired(sessionDateStr: string, endTimeStr?: string | null, st
 export default function AdminDashboardClient({
   adminName,
   availableManagements = [],
+  availableBlocks = [],
   stats,
   initialSessions,
   initialSchools,
@@ -186,6 +188,7 @@ export default function AdminDashboardClient({
   const [generalMeetUrl, setGeneralMeetUrl] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [selectedManagements, setSelectedManagements] = useState<string[]>([]);
+  const [selectedBlocks, setSelectedBlocks] = useState<string[]>([]);
 
   // Filtered lists
   const filteredSchools = schools.filter(
@@ -221,6 +224,7 @@ export default function AdminDashboardClient({
         generalMeetUrl,
         categoryTypes: selectedCategories,
         managements: selectedManagements,
+        blocks: selectedBlocks,
       });
 
       if (res.error) {
@@ -238,6 +242,7 @@ export default function AdminDashboardClient({
         setGeneralMeetUrl("");
         setSelectedCategories([]);
         setSelectedManagements([]);
+        setSelectedBlocks([]);
         setActiveTab("sessions");
         router.refresh();
       }
@@ -635,7 +640,7 @@ export default function AdminDashboardClient({
                               )}
                             </TableCell>
                             <TableCell>
-                              {(!s.categoryRules?.length && !s.managementRules?.length) ? (
+                              {(!s.categoryRules?.length && !s.managementRules?.length && !s.blockRules?.length) ? (
                                 <Badge variant="secondary">All Schools</Badge>
                               ) : (
                                 <div className="flex gap-1 flex-wrap max-w-[220px]">
@@ -644,6 +649,9 @@ export default function AdminDashboardClient({
                                   ))}
                                   {s.managementRules?.map((r: any) => (
                                     <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.management}</Badge>
+                                  ))}
+                                  {s.blockRules?.map((r: any) => (
+                                    <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>
                                   ))}
                                 </div>
                               )}
@@ -809,10 +817,45 @@ export default function AdminDashboardClient({
                       )}
                     </div>
 
+                    <div className="space-y-2 pt-3 border-t border-gray-100">
+                      <label className="text-sm font-semibold text-gray-700">3. Target School Blocks</label>
+                      {availableBlocks.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No block options found in database.</p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
+                          {availableBlocks.map((blk) => {
+                            const isSelected = selectedBlocks.includes(blk);
+                            return (
+                              <div
+                                key={blk}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedBlocks(selectedBlocks.filter((b) => b !== blk));
+                                  } else {
+                                    setSelectedBlocks([...selectedBlocks, blk]);
+                                  }
+                                }}
+                                className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                                  isSelected
+                                    ? "bg-emerald-50 border-emerald-600 text-emerald-900"
+                                    : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-emerald-600 bg-emerald-600 text-white" : "border-gray-300 bg-white"}`}>
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <div className="text-xs font-semibold truncate">{blk}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
                     <p className="text-xs text-gray-500 pt-1">
-                      {selectedCategories.length === 0 && selectedManagements.length === 0
+                      {selectedCategories.length === 0 && selectedManagements.length === 0 && selectedBlocks.length === 0
                         ? "No filters selected. Session will be visible to ALL active teachers."
-                        : `Targeting: ${selectedCategories.length > 0 ? `${selectedCategories.length} Category Type(s)` : "All Category Types"} AND ${selectedManagements.length > 0 ? `${selectedManagements.length} Management(s)` : "All Managements"}.`}
+                        : `Targeting: ${selectedCategories.length > 0 ? `${selectedCategories.length} Category Type(s)` : "All Categories"} AND ${selectedManagements.length > 0 ? `${selectedManagements.length} Management(s)` : "All Managements"} AND ${selectedBlocks.length > 0 ? `${selectedBlocks.length} Block(s)` : "All Blocks"}.`}
                     </p>
                   </div>
 

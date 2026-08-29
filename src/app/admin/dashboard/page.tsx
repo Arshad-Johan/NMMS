@@ -17,6 +17,7 @@ export default async function AdminDashboardPage() {
     schools,
     recentAttendance,
     rawManagements,
+    rawBlocks,
   ] = await Promise.all([
     prisma.school.count(),
     prisma.session.count(),
@@ -26,6 +27,7 @@ export default async function AdminDashboardPage() {
       include: {
         categoryRules: true,
         managementRules: true,
+        blockRules: true,
         _count: { select: { attendance: true, meetLinks: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -47,11 +49,21 @@ export default async function AdminDashboardPage() {
       distinct: ["management"],
       orderBy: { management: "asc" },
     }),
+    prisma.school.findMany({
+      where: { block: { not: null } },
+      select: { block: true },
+      distinct: ["block"],
+      orderBy: { block: "asc" },
+    }),
   ]);
 
   const availableManagements = rawManagements
     .map((m) => m.management)
     .filter((m): m is string => Boolean(m));
+
+  const availableBlocks = rawBlocks
+    .map((b) => b.block)
+    .filter((b): b is string => Boolean(b));
 
   const overallRate =
     totalAttendance > 0 ? Math.round((presentAttendance / totalAttendance) * 100) : 0;
@@ -62,6 +74,7 @@ export default async function AdminDashboardPage() {
     <AdminDashboardClient
       adminName={adminName}
       availableManagements={availableManagements}
+      availableBlocks={availableBlocks}
       stats={{
         totalSchools,
         totalSessions,

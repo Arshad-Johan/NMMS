@@ -28,6 +28,7 @@ export default async function TeacherDashboard() {
   const teacherId = teacher.id;
   const categoryType = teacher.school.categoryType;
   const management = teacher.school.management;
+  const block = teacher.school.block;
 
   // 1. Fetch Stats
   const totalAttendance = await prisma.attendance.count({
@@ -57,6 +58,12 @@ export default async function TeacherDashboard() {
           OR: [
             { managementRules: { none: {} } },
             ...(management ? [{ managementRules: { some: { management } } }] : []),
+          ],
+        },
+        {
+          OR: [
+            { blockRules: { none: {} } },
+            ...(block ? [{ blockRules: { some: { block } } }] : []),
           ],
         },
       ],
