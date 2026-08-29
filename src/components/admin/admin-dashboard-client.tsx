@@ -497,7 +497,7 @@ export default function AdminDashboardClient({
                         <TableHead>Title</TableHead>
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Google Meet Link</TableHead>
-                        <TableHead>Target Categories</TableHead>
+                        <TableHead>Target Rules</TableHead>
                         <TableHead>Exports</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -539,15 +539,18 @@ export default function AdminDashboardClient({
                               )}
                             </TableCell>
                             <TableCell>
-                              {(!s.categoryRules?.length && !s.managementRules?.length) ? (
+                              {(!s.categoryRules?.length && !s.managementRules?.length && !s.blockRules?.length) ? (
                                 <Badge variant="secondary">All Schools</Badge>
                               ) : (
-                                <div className="flex gap-1 flex-wrap">
+                                <div className="flex gap-1 flex-wrap max-w-[220px]">
                                   {s.categoryRules?.map((r: any) => (
                                     <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>
                                   ))}
                                   {s.managementRules?.map((r: any) => (
                                     <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.management}</Badge>
+                                  ))}
+                                  {s.blockRules?.map((r: any) => (
+                                    <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>
                                   ))}
                                 </div>
                               )}
