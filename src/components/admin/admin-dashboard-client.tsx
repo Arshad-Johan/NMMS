@@ -362,7 +362,7 @@ export default function AdminDashboardClient({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(`Exported attendance for "${title}" (${res.count} records)!`);
+        toast.success(`Exported attendance for "${title}" (${res.count} schools)!`);
         setExportingSessionId(null);
       }
     });

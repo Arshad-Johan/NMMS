@@ -369,19 +369,23 @@ export async function exportAttendanceExcelAction(
     const categoryTypes = targetSession.categoryRules.map((r) => r.categoryType);
     const managements = targetSession.managementRules.map((r) => r.management);
 
-    const eligibleTeachers = await prisma.teacher.findMany({
+    // Query ALL targeted schools (not teachers) so every school appears in the export
+    const eligibleSchools = await prisma.school.findMany({
       where: {
         isActive: true,
-        school: {
-          ...(categoryTypes.length > 0 ? { categoryType: { in: categoryTypes } } : {}),
-          ...(managements.length > 0 ? { management: { in: managements } } : {}),
-        },
+        ...(categoryTypes.length > 0 ? { categoryType: { in: categoryTypes } } : {}),
+        ...(managements.length > 0 ? { management: { in: managements } } : {}),
       },
       include: {
-        school: true,
-        attendance: {
-          where: { sessionId },
-          select: { status: true, markedAt: true },
+        teachers: {
+          where: { isActive: true },
+          take: 1,
+          include: {
+            attendance: {
+              where: { sessionId },
+              select: { status: true, markedAt: true },
+            },
+          },
         },
       },
       orderBy: { name: "asc" },
@@ -397,38 +401,36 @@ export async function exportAttendanceExcelAction(
     
     sheet.columns = [
       { header: "S.No", key: "sno", width: 8 },
-      { header: "Teacher Name", key: "name", width: 25 },
-      { header: "Mobile Number", key: "mobile", width: 15 },
-      { header: "Subject / Role", key: "subject", width: 20 },
-      { header: "School Name", key: "school", width: 35 },
       { header: "UDISE Code", key: "udise", width: 15 },
+      { header: "School Name", key: "school", width: 40 },
+      { header: "Management", key: "management", width: 30 },
       { header: "Block", key: "block", width: 20 },
       { header: "District", key: "district", width: 20 },
-      { header: "School Category", key: "category", width: 25 },
+      { header: "Category Type", key: "category", width: 25 },
       { header: "Attendance Status", key: "status", width: 20 },
       { header: "Marked Time", key: "markedAt", width: 15 },
     ];
     
     sheet.getRow(1).font = { bold: true };
 
-    eligibleTeachers.forEach((t, idx) => {
-      const isPresent = t.attendance[0]?.status === "present";
-      const statusText = isPresent ? "PRESENT" : "ABSENT";
+    eligibleSchools.forEach((sc, idx) => {
+      const teacher = sc.teachers[0];
+      const attendanceRecord = teacher?.attendance?.[0];
+      const isPresent = attendanceRecord?.status === "present";
+      const statusText = attendanceRecord ? (isPresent ? "PRESENT" : "ABSENT") : "ABSENT";
       
       const row = sheet.addRow({
         sno: idx + 1,
-        name: t.name ?? "Unassigned",
-        mobile: t.mobile.replace("UD_", ""),
-        subject: t.subject ?? "NMMS Incharge",
-        school: t.school?.name ?? "N/A",
-        udise: t.schoolUdise,
-        block: t.school?.block ?? "N/A",
-        district: t.school?.educationDistrict ?? "N/A",
-        category: t.school?.categoryType ? t.school.categoryType.replace("_", " ") : "N/A",
+        udise: sc.udise,
+        school: sc.name,
+        management: sc.management ?? "N/A",
+        block: sc.block ?? "N/A",
+        district: sc.educationDistrict ?? "N/A",
+        category: sc.categoryType ? sc.categoryType.replace("_", " ") : "N/A",
         status: statusText,
-        markedAt: t.attendance[0]?.markedAt
-          ? new Date(t.attendance[0].markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-          : "N/A"
+        markedAt: attendanceRecord?.markedAt
+          ? new Date(attendanceRecord.markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+          : "—"
       });
       
       const statusCell = row.getCell("status");
@@ -444,7 +446,7 @@ export async function exportAttendanceExcelAction(
     return {
       base64,
       filename,
-      count: eligibleTeachers.length,
+      count: eligibleSchools.length,
     };
   } catch (err: any) {
     console.error("exportAttendanceExcelAction error:", err);
