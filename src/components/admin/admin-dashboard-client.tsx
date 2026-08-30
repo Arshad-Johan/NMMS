@@ -67,7 +67,7 @@ type Tab = "overview" | "sessions" | "new-session" | "schools";
 
 interface AdminDashboardProps {
   adminName: string;
-  availableManagements?: string[];
+  availableSchoolTypes?: string[];
   availableBlocks?: string[];
   stats: {
     totalSchools: number;
@@ -144,7 +144,7 @@ function isSessionExpired(sessionDateStr: string, endTimeStr?: string | null, st
 
 export default function AdminDashboardClient({
   adminName,
-  availableManagements = [],
+  availableSchoolTypes = [],
   availableBlocks = [],
   stats,
   initialSessions,
@@ -187,7 +187,7 @@ export default function AdminDashboardClient({
   const [endTime, setEndTime] = useState("");
   const [generalMeetUrl, setGeneralMeetUrl] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
-  const [selectedManagements, setSelectedManagements] = useState<string[]>([]);
+  const [selectedSchoolTypes, setSelectedSchoolTypes] = useState<string[]>([]);
   const [selectedBlocks, setSelectedBlocks] = useState<string[]>([]);
 
   // Filtered lists
@@ -223,7 +223,7 @@ export default function AdminDashboardClient({
         endTime: endTime || undefined,
         generalMeetUrl,
         categoryTypes: selectedCategories,
-        managements: selectedManagements,
+        schoolTypes: selectedSchoolTypes,
         blocks: selectedBlocks,
       });
 
@@ -241,7 +241,7 @@ export default function AdminDashboardClient({
         setEndTime("");
         setGeneralMeetUrl("");
         setSelectedCategories([]);
-        setSelectedManagements([]);
+        setSelectedSchoolTypes([]);
         setSelectedBlocks([]);
         setActiveTab("sessions");
         router.refresh();
@@ -539,15 +539,15 @@ export default function AdminDashboardClient({
                               )}
                             </TableCell>
                             <TableCell>
-                              {(!s.categoryRules?.length && !s.managementRules?.length && !s.blockRules?.length) ? (
+                              {(!s.categoryRules?.length && !s.schoolTypeRules?.length && !s.blockRules?.length) ? (
                                 <Badge variant="secondary">All Schools</Badge>
                               ) : (
                                 <div className="flex gap-1 flex-wrap max-w-[220px]">
                                   {s.categoryRules?.map((r: any) => (
                                     <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>
                                   ))}
-                                  {s.managementRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.management}</Badge>
+                                  {s.schoolTypeRules?.map((r: any) => (
+                                    <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>
                                   ))}
                                   {s.blockRules?.map((r: any) => (
                                     <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>
@@ -643,15 +643,15 @@ export default function AdminDashboardClient({
                               )}
                             </TableCell>
                             <TableCell>
-                              {(!s.categoryRules?.length && !s.managementRules?.length && !s.blockRules?.length) ? (
+                              {(!s.categoryRules?.length && !s.schoolTypeRules?.length && !s.blockRules?.length) ? (
                                 <Badge variant="secondary">All Schools</Badge>
                               ) : (
                                 <div className="flex gap-1 flex-wrap max-w-[220px]">
                                   {s.categoryRules?.map((r: any) => (
                                     <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>
                                   ))}
-                                  {s.managementRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.management}</Badge>
+                                  {s.schoolTypeRules?.map((r: any) => (
+                                    <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>
                                   ))}
                                   {s.blockRules?.map((r: any) => (
                                     <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>
@@ -786,21 +786,21 @@ export default function AdminDashboardClient({
                     </div>
 
                     <div className="space-y-2 pt-3 border-t border-gray-100">
-                      <label className="text-sm font-semibold text-gray-700">2. Target School Managements</label>
-                      {availableManagements.length === 0 ? (
-                        <p className="text-xs text-gray-500 italic">No management options found in database.</p>
+                      <label className="text-sm font-semibold text-gray-700">2. Target School Types</label>
+                      {availableSchoolTypes.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No school type options found in database.</p>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1">
-                          {availableManagements.map((mgmt) => {
-                            const isSelected = selectedManagements.includes(mgmt);
+                          {availableSchoolTypes.map((st) => {
+                            const isSelected = selectedSchoolTypes.includes(st);
                             return (
                               <div
-                                key={mgmt}
+                                key={st}
                                 onClick={() => {
                                   if (isSelected) {
-                                    setSelectedManagements(selectedManagements.filter((m) => m !== mgmt));
+                                    setSelectedSchoolTypes(selectedSchoolTypes.filter((s) => s !== st));
                                   } else {
-                                    setSelectedManagements([...selectedManagements, mgmt]);
+                                    setSelectedSchoolTypes([...selectedSchoolTypes, st]);
                                   }
                                 }}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${
@@ -812,7 +812,7 @@ export default function AdminDashboardClient({
                                 <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-purple-600 bg-purple-600 text-white" : "border-gray-300 bg-white"}`}>
                                   {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                                 </div>
-                                <div className="text-xs font-semibold truncate">{mgmt}</div>
+                                <div className="text-xs font-semibold truncate">{st}</div>
                               </div>
                             );
                           })}
@@ -856,9 +856,9 @@ export default function AdminDashboardClient({
                     </div>
 
                     <p className="text-xs text-gray-500 pt-1">
-                      {selectedCategories.length === 0 && selectedManagements.length === 0 && selectedBlocks.length === 0
+                      {selectedCategories.length === 0 && selectedSchoolTypes.length === 0 && selectedBlocks.length === 0
                         ? "No filters selected. Session will be visible to ALL active teachers."
-                        : `Targeting: ${selectedCategories.length > 0 ? `${selectedCategories.length} Category Type(s)` : "All Categories"} AND ${selectedManagements.length > 0 ? `${selectedManagements.length} Management(s)` : "All Managements"} AND ${selectedBlocks.length > 0 ? `${selectedBlocks.length} Block(s)` : "All Blocks"}.`}
+                        : `Targeting: ${selectedCategories.length > 0 ? `${selectedCategories.length} Category Type(s)` : "All Categories"} AND ${selectedSchoolTypes.length > 0 ? `${selectedSchoolTypes.length} School Type(s)` : "All School Types"} AND ${selectedBlocks.length > 0 ? `${selectedBlocks.length} Block(s)` : "All Blocks"}.`}
                     </p>
                   </div>
 

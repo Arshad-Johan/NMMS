@@ -107,7 +107,7 @@ model Session {
   attendance        Attendance[]
   meetLinks         MeetLink[]
   categoryRules     SessionCategoryRule[]
-  managementRules   SessionManagementRule[]
+  schoolTypeRules   SessionSchoolTypeRule[]
   blockRules        SessionBlockRule[]
   createdByAdmin    User                  @relation(fields: [createdByAdminId], references: [id], onUpdate: NoAction, map: "sessions_created_by_admin_id_users_id_fk")
 
@@ -127,15 +127,15 @@ model SessionCategoryRule {
   @@map("session_category_rules")
 }
 
-model SessionManagementRule {
+model SessionSchoolTypeRule {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sessionId  String   @map("session_id") @db.Uuid
-  management String   @map("management") @db.VarChar(150)
-  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_management_rules_session_id_sessions_id_fk")
+  schoolType String   @map("school_type") @db.VarChar(100)
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_school_type_rules_session_id_sessions_id_fk")
 
-  @@unique([sessionId, management], map: "session_management_unique_idx")
-  @@index([sessionId], map: "session_management_session_idx")
-  @@map("session_management_rules")
+  @@unique([sessionId, schoolType], map: "session_school_type_unique_idx")
+  @@index([sessionId], map: "session_school_type_session_idx")
+  @@map("session_school_type_rules")
 }
 
 model SessionBlockRule {

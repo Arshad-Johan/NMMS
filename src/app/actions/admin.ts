@@ -14,7 +14,7 @@ export interface CreateSessionInput {
   endTime?: string;    // HH:mm (24hr format)
   generalMeetUrl: string;
   categoryTypes: CategoryType[];
-  managements?: string[];
+  schoolTypes?: string[];
   blocks?: string[];
 }
 
@@ -243,8 +243,8 @@ export async function createSessionAction(
         categoryRules: {
           create: (input.categoryTypes || []).map((categoryType) => ({ categoryType })),
         },
-        managementRules: {
-          create: (input.managements || []).map((management) => ({ management })),
+        schoolTypeRules: {
+          create: (input.schoolTypes || []).map((schoolType) => ({ schoolType })),
         },
         blockRules: {
           create: (input.blocks || []).map((block) => ({ block })),
@@ -252,7 +252,7 @@ export async function createSessionAction(
       },
       include: {
         categoryRules: true,
-        managementRules: true,
+        schoolTypeRules: true,
         blockRules: true,
       },
     });
@@ -363,13 +363,13 @@ export async function exportAttendanceExcelAction(
   try {
     const targetSession = await prisma.session.findUnique({
       where: { id: sessionId },
-      include: { categoryRules: true, managementRules: true, blockRules: true },
+      include: { categoryRules: true, schoolTypeRules: true, blockRules: true },
     });
 
     if (!targetSession) return { error: "Session not found." };
 
     const categoryTypes = targetSession.categoryRules.map((r) => r.categoryType);
-    const managements = targetSession.managementRules.map((r) => r.management);
+    const schoolTypes = targetSession.schoolTypeRules.map((r) => r.schoolType);
     const blocks = targetSession.blockRules.map((r) => r.block);
 
     // Query ALL targeted schools (not teachers) so every school appears in the export
@@ -377,7 +377,7 @@ export async function exportAttendanceExcelAction(
       where: {
         isActive: true,
         ...(categoryTypes.length > 0 ? { categoryType: { in: categoryTypes } } : {}),
-        ...(managements.length > 0 ? { management: { in: managements } } : {}),
+        ...(schoolTypes.length > 0 ? { schoolType: { in: schoolTypes } } : {}),
         ...(blocks.length > 0 ? { block: { in: blocks } } : {}),
       },
       include: {
@@ -407,6 +407,7 @@ export async function exportAttendanceExcelAction(
       { header: "S.No", key: "sno", width: 8 },
       { header: "UDISE Code", key: "udise", width: 15 },
       { header: "School Name", key: "school", width: 40 },
+      { header: "School Type", key: "schoolType", width: 25 },
       { header: "Management", key: "management", width: 30 },
       { header: "Block", key: "block", width: 20 },
       { header: "District", key: "district", width: 20 },
@@ -427,6 +428,7 @@ export async function exportAttendanceExcelAction(
         sno: idx + 1,
         udise: sc.udise,
         school: sc.name,
+        schoolType: sc.schoolType ?? "N/A",
         management: sc.management ?? "N/A",
         block: sc.block ?? "N/A",
         district: sc.educationDistrict ?? "N/A",
@@ -483,6 +485,7 @@ export async function exportTrainersExcelAction(): Promise<{ base64?: string; fi
       "Mobile Number": t.mobile,
       "Role / Subject": t.subject ?? "NMMS Incharge",
       "School Name": t.school?.name ?? "N/A",
+      "School Type": t.school?.schoolType ?? "N/A",
       "UDISE Code": t.schoolUdise,
       "Block": t.school?.block ?? "N/A",
       "District": t.school?.educationDistrict ?? "N/A",

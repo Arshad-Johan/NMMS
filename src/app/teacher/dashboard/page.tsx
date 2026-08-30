@@ -17,7 +17,7 @@ export default async function TeacherDashboard() {
           block: true,
           educationDistrict: true,
           categoryType: true,
-          management: true,
+          schoolType: true,
         },
       },
     },
@@ -27,7 +27,7 @@ export default async function TeacherDashboard() {
 
   const teacherId = teacher.id;
   const categoryType = teacher.school.categoryType;
-  const management = teacher.school.management;
+  const schoolType = teacher.school.schoolType;
   const block = teacher.school.block;
 
   // 1. Fetch Stats
@@ -56,8 +56,8 @@ export default async function TeacherDashboard() {
         },
         {
           OR: [
-            { managementRules: { none: {} } },
-            ...(management ? [{ managementRules: { some: { management } } }] : []),
+            { schoolTypeRules: { none: {} } },
+            ...(schoolType ? [{ schoolTypeRules: { some: { schoolType } } }] : []),
           ],
         },
         {

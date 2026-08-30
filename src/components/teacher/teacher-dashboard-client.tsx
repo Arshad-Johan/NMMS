@@ -49,7 +49,7 @@ interface TeacherDashboardClientProps {
       block: string | null;
       educationDistrict: string | null;
       categoryType: string | null;
-      management?: string | null;
+      schoolType?: string | null;
     };
   };
   stats: {
@@ -304,9 +304,9 @@ export default function TeacherDashboardClient({
                   {teacher.school.categoryType.replace("_", " ")}
                 </Badge>
               )}
-              {teacher.school.management && (
+              {teacher.school.schoolType && (
                 <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 w-fit">
-                  {teacher.school.management}
+                  {teacher.school.schoolType}
                 </Badge>
               )}
               {teacher.school.block && (
