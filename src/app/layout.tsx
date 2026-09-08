@@ -3,9 +3,9 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NMMS Attendance Portal",
+  title: "CEO - Madurai | Gmeet Attendance Portal",
   description:
-    "National Means Cum Merit Scholarship Scheme — Teacher Attendance Management System",
+    "CEO - Madurai | Gmeet Attendance Portal — Attendance Management System",
 };
 
 export default function RootLayout({

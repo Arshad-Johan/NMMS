@@ -1,9 +1,9 @@
 "use server";
 
 import { prisma } from "@/db/index";
-import { signToken, verifyPassword } from "@/lib/auth";
+import { signToken, verifyPassword, hashPassword } from "@/lib/auth";
 import { setSessionCookie, clearSessionCookie } from "@/lib/cookies";
-import { checkAndSetDeviceLock } from "@/lib/device";
+import { checkAndSetDeviceLock, checkAndSetBrteDeviceLock } from "@/lib/device";
 
 // ---------------------------------------------------------------------------
 // Login Action (UDISE Code Login, locked to device per day)
@@ -74,30 +74,51 @@ export async function loginWithUdiseAction(
 }
 
 // ---------------------------------------------------------------------------
-// Admin Password Login Action
+// Admin Password Login Action (Single Password: prince@1977)
 // ---------------------------------------------------------------------------
 export async function adminPasswordLoginAction(
-  email: string,
   pass: string
 ): Promise<{ success?: true; error?: string }> {
-  const cleanEmail = email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({
-    where: { email: cleanEmail },
-  });
-
-  if (!user || user.role !== "admin") {
-    return { error: "Invalid admin credentials." };
+  const trimmedPass = pass.trim();
+  if (!trimmedPass) {
+    return { error: "Please enter the admin password." };
   }
 
-  const valid = verifyPassword(pass, user.passwordHash);
-  if (!valid) {
-    return { error: "Invalid admin credentials." };
+  // Find or create default admin user
+  let user = await prisma.user.findFirst({
+    where: { role: "admin" },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        name: "Administrator",
+        email: "admin@nmms.local",
+        passwordHash: hashPassword("prince@1977"),
+        role: "admin",
+      },
+    });
+  }
+
+  const isMasterMatch = trimmedPass === "prince@1977";
+  const isHashMatch = verifyPassword(trimmedPass, user.passwordHash);
+
+  if (!isMasterMatch && !isHashMatch) {
+    return { error: "Invalid admin password." };
+  }
+
+  // If master password matched, ensure DB password hash is up to date
+  if (isMasterMatch && !isHashMatch) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hashPassword("prince@1977") },
+    });
   }
 
   const token = signToken({
     id: user.id,
     mobile: "0000000000",
-    name: user.name,
+    name: user.name ?? "Administrator",
     role: "admin",
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
   });
@@ -111,4 +132,42 @@ export async function adminPasswordLoginAction(
 // ---------------------------------------------------------------------------
 export async function logoutAction(): Promise<void> {
   await clearSessionCookie();
+}
+
+// ---------------------------------------------------------------------------
+// BRTE Login Action (EMIS ID Login, locked to device per day)
+// ---------------------------------------------------------------------------
+export async function loginWithBrteAction(
+  emisId: string
+): Promise<{ success?: true; error?: string }> {
+  const cleaned = emisId.trim().replace(/\D/g, "");
+  if (!cleaned || cleaned.length !== 8) {
+    return { error: "Please enter a valid 8-digit BRTE EMIS ID." };
+  }
+
+  // Find BRTE record
+  const brte = await prisma.brte.findUnique({
+    where: { emis: cleaned },
+  });
+
+  if (!brte || !brte.isActive) {
+    return { error: "BRTE EMIS ID not found or account is inactive. Contact your administrator." };
+  }
+
+  // Check device lock using cleaned EMIS ID
+  const deviceCheck = await checkAndSetBrteDeviceLock(cleaned);
+  if (!deviceCheck.allowed) {
+    return { error: deviceCheck.error };
+  }
+
+  const token = signToken({
+    id: brte.id,
+    mobile: brte.emis,
+    name: brte.name,
+    role: "brte",
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
+  });
+
+  await setSessionCookie(token);
+  return { success: true };
 }

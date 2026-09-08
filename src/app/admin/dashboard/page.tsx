@@ -11,16 +11,20 @@ export default async function AdminDashboardPage() {
   const [
     totalSchools,
     totalSessions,
+    totalBrteSessions,
     totalAttendance,
     presentAttendance,
     sessions,
+    brteSessions,
     schools,
     recentAttendance,
     rawSchoolTypes,
     rawBlocks,
+    rawBrteBlocks,
   ] = await Promise.all([
     prisma.school.count(),
     prisma.session.count(),
+    prisma.brteSession.count(),
     prisma.attendance.count(),
     prisma.attendance.count({ where: { status: "present" } }),
     prisma.session.findMany({
@@ -29,6 +33,13 @@ export default async function AdminDashboardPage() {
         schoolTypeRules: true,
         blockRules: true,
         _count: { select: { attendance: true, meetLinks: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.brteSession.findMany({
+      include: {
+        blockRules: true,
+        _count: { select: { attendance: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -55,6 +66,12 @@ export default async function AdminDashboardPage() {
       distinct: ["block"],
       orderBy: { block: "asc" },
     }),
+    prisma.brte.findMany({
+      where: { block: { not: null } },
+      select: { block: true },
+      distinct: ["block"],
+      orderBy: { block: "asc" },
+    }),
   ]);
 
   const availableSchoolTypes = rawSchoolTypes
@@ -62,6 +79,10 @@ export default async function AdminDashboardPage() {
     .filter((s): s is string => Boolean(s));
 
   const availableBlocks = rawBlocks
+    .map((b) => b.block)
+    .filter((b): b is string => Boolean(b));
+
+  const availableBrteBlocks = rawBrteBlocks
     .map((b) => b.block)
     .filter((b): b is string => Boolean(b));
 
@@ -75,9 +96,11 @@ export default async function AdminDashboardPage() {
       adminName={adminName}
       availableSchoolTypes={availableSchoolTypes}
       availableBlocks={availableBlocks}
+      availableBrteBlocks={availableBrteBlocks}
       stats={{
         totalSchools,
         totalSessions,
+        totalBrteSessions,
         overallRate,
       }}
       initialSessions={sessions.map((s) => ({
@@ -86,6 +109,13 @@ export default async function AdminDashboardPage() {
         startTime: s.startTime ? s.startTime.toISOString() : null,
         endTime: s.endTime ? s.endTime.toISOString() : null,
         createdAt: s.createdAt.toISOString(),
+      }))}
+      initialBrteSessions={brteSessions.map((bs) => ({
+        ...bs,
+        sessionDate: bs.sessionDate.toISOString(),
+        startTime: bs.startTime ? bs.startTime.toISOString() : null,
+        endTime: bs.endTime ? bs.endTime.toISOString() : null,
+        createdAt: bs.createdAt.toISOString(),
       }))}
       initialSchools={schools.map((sc) => ({
         ...sc,

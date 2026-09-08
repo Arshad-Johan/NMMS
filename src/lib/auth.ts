@@ -22,7 +22,7 @@ export interface SessionPayload {
   id: string;
   mobile: string;
   name: string | null;
-  role: "teacher" | "admin";
+  role: "teacher" | "admin" | "brte";
   /** Unix timestamp (seconds) */
   exp: number;
 }

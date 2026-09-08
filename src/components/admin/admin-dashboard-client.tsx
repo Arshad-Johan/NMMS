@@ -14,67 +14,64 @@ import {
   markAttendanceAction,
   deleteAttendanceAction,
   exportAttendanceExcelAction,
+  exportConsolidatedAttendanceExcelAction,
+  exportConsolidatedBrteAttendanceExcelAction,
+  createBrteSessionAction,
+  updateBrteSessionAction,
+  deleteBrteSessionAction,
+  exportBrteAttendanceExcelAction,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableHeader,
   TableRow,
   TableHead,
   TableBody,
-  TableCell
+  TableCell,
 } from "@/components/ui/table";
 import {
-  GraduationCap,
   LogOut,
   Plus,
-  Calendar,
-  Users,
   School as SchoolIcon,
-  BarChart3,
   Video,
-  CheckCircle2,
-  XCircle,
   Search,
   RefreshCw,
-  AlertCircle,
   Check,
-  Shield,
   Layers,
-  ClipboardList,
   ExternalLink,
   Edit2,
   Trash2,
   X,
-  UserPlus,
   Building2,
-  FileSpreadsheet,
   Download,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Clock,
-  Landmark
+  Landmark,
+  BookOpen,
 } from "lucide-react";
-import { CategoryType, SchoolType, AttendanceStatus } from "@prisma/client";
+import { CategoryType } from "@prisma/client";
 
-type Tab = "overview" | "sessions" | "new-session" | "schools";
+type Tab = "overview" | "sessions" | "new-session" | "brte-sessions" | "new-brte-session" | "schools";
 
 interface AdminDashboardProps {
   adminName: string;
   availableSchoolTypes?: string[];
   availableBlocks?: string[];
+  availableBrteBlocks?: string[];
   stats: {
     totalSchools: number;
     totalSessions: number;
+    totalBrteSessions?: number;
     overallRate: number;
   };
   initialSessions: any[];
+  initialBrteSessions?: any[];
   initialSchools: any[];
   initialAttendance: any[];
 }
@@ -106,7 +103,7 @@ function formatSessionTimeString(startTime?: string | null, endTime?: string | n
       timeZone: "UTC",
     });
     return `${start} - ${end}`;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -137,7 +134,7 @@ function isSessionExpired(sessionDateStr: string, endTimeStr?: string | null, st
     const now = new Date();
 
     return now.getTime() > sessionEndTime.getTime();
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -146,19 +143,29 @@ export default function AdminDashboardClient({
   adminName,
   availableSchoolTypes = [],
   availableBlocks = [],
+  availableBrteBlocks = [],
   stats,
   initialSessions,
+  initialBrteSessions = [],
   initialSchools,
   initialAttendance,
 }: AdminDashboardProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [sessions, setSessions] = useState(initialSessions);
+  const [brteSessions, setBrteSessions] = useState(initialBrteSessions);
   const [schools, setSchools] = useState(initialSchools);
 
   const [schoolSearch, setSchoolSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const [exportingSessionId, setExportingSessionId] = useState<string | null>(null);
+  const [exportingBrteSessionId, setExportingBrteSessionId] = useState<string | null>(null);
+  const [isExportingConsolidated, setIsExportingConsolidated] = useState(false);
+  const [isExportingConsolidatedBrte, setIsExportingConsolidatedBrte] = useState(false);
+  const [isExportSchoolsMatrixOpen, setIsExportSchoolsMatrixOpen] = useState(false);
+  const [exportFilterCategories, setExportFilterCategories] = useState<CategoryType[]>([]);
+  const [exportFilterSchoolTypes, setExportFilterSchoolTypes] = useState<string[]>([]);
+  const [exportFilterBlocks, setExportFilterBlocks] = useState<string[]>([]);
 
   // Pagination States
   const [schoolPage, setSchoolPage] = useState(1);
@@ -178,8 +185,9 @@ export default function AdminDashboardClient({
   });
 
   const [editingSession, setEditingSession] = useState<any | null>(null);
+  const [editingBrteSession, setEditingBrteSession] = useState<any | null>(null);
 
-  // New Session Form State
+  // New Teacher Session Form State
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [sessionDate, setSessionDate] = useState("");
@@ -189,6 +197,15 @@ export default function AdminDashboardClient({
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [selectedSchoolTypes, setSelectedSchoolTypes] = useState<string[]>([]);
   const [selectedBlocks, setSelectedBlocks] = useState<string[]>([]);
+
+  // New BRTE Session Form State
+  const [brteTitle, setBrteTitle] = useState("");
+  const [brteDescription, setBrteDescription] = useState("");
+  const [brteSessionDate, setBrteSessionDate] = useState("");
+  const [brteStartTime, setBrteStartTime] = useState("");
+  const [brteEndTime, setBrteEndTime] = useState("");
+  const [brteMeetUrl, setBrteMeetUrl] = useState("");
+  const [selectedBrteBlocks, setSelectedBrteBlocks] = useState<string[]>([]);
 
   // Filtered lists
   const filteredSchools = schools.filter(
@@ -209,7 +226,7 @@ export default function AdminDashboardClient({
   );
 
   // ---------------------------------------------------------------------------
-  // HANDLERS
+  // TEACHER SESSION HANDLERS
   // ---------------------------------------------------------------------------
 
   function handleCreateSession(e: React.FormEvent) {
@@ -285,6 +302,185 @@ export default function AdminDashboardClient({
     });
   }
 
+  function handleExportSessionExcel(sessionId: string, title: string) {
+    setExportingSessionId(sessionId);
+    startTransition(async () => {
+      const res = await exportAttendanceExcelAction(sessionId);
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setExportingSessionId(null);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported attendance for "${title}" (${res.count} schools)!`);
+        setExportingSessionId(null);
+      }
+    });
+  }
+
+  function handleExportConsolidatedAttendance() {
+    setExportFilterCategories([]);
+    setExportFilterSchoolTypes([]);
+    setExportFilterBlocks([]);
+    setIsExportSchoolsMatrixOpen(true);
+  }
+
+  function handleConfirmExportConsolidatedAttendance() {
+    const totalSelected =
+      exportFilterCategories.length +
+      exportFilterSchoolTypes.length +
+      exportFilterBlocks.length;
+
+    if (totalSelected === 0) {
+      toast.error("Please select at least one filter option or click 'Select All Filters'.");
+      return;
+    }
+
+    setIsExportingConsolidated(true);
+    startTransition(async () => {
+      const res = await exportConsolidatedAttendanceExcelAction({
+        categoryTypes: exportFilterCategories.length > 0 ? exportFilterCategories : undefined,
+        schoolTypes: exportFilterSchoolTypes.length > 0 ? exportFilterSchoolTypes : undefined,
+        blocks: exportFilterBlocks.length > 0 ? exportFilterBlocks : undefined,
+      });
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setIsExportingConsolidated(false);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported master NMMS attendance matrix (${res.count} schools)!`);
+        setIsExportingConsolidated(false);
+        setIsExportSchoolsMatrixOpen(false);
+      }
+    });
+  }
+
+  function handleExportConsolidatedBrteAttendance() {
+    setIsExportingConsolidatedBrte(true);
+    startTransition(async () => {
+      const res = await exportConsolidatedBrteAttendanceExcelAction();
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setIsExportingConsolidatedBrte(false);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported master BRTE attendance matrix for all ${res.count} BRTEs!`);
+        setIsExportingConsolidatedBrte(false);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // BRTE SESSION HANDLERS
+  // ---------------------------------------------------------------------------
+
+  function handleCreateBrteSession(e: React.FormEvent) {
+    e.preventDefault();
+    startTransition(async () => {
+      const res = await createBrteSessionAction({
+        title: brteTitle,
+        description: brteDescription,
+        sessionDate: brteSessionDate,
+        startTime: brteStartTime || undefined,
+        endTime: brteEndTime || undefined,
+        generalMeetUrl: brteMeetUrl,
+        blocks: selectedBrteBlocks,
+      });
+
+      if (res.error) {
+        toast.error(`Failed to create BRTE session: ${res.error}`);
+      } else {
+        toast.success("BRTE Session created successfully!");
+        if (res.createdSession) {
+          setBrteSessions((prev) => [res.createdSession, ...prev]);
+        }
+        setBrteTitle("");
+        setBrteDescription("");
+        setBrteSessionDate("");
+        setBrteStartTime("");
+        setBrteEndTime("");
+        setBrteMeetUrl("");
+        setSelectedBrteBlocks([]);
+        setActiveTab("brte-sessions");
+        router.refresh();
+      }
+    });
+  }
+
+  function handleUpdateBrteSession(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingBrteSession) return;
+
+    startTransition(async () => {
+      const res = await updateBrteSessionAction(editingBrteSession.id, {
+        title: editingBrteSession.title,
+        generalMeetUrl: editingBrteSession.generalMeetUrl,
+        isAttendanceOpen: editingBrteSession.isAttendanceOpen,
+        isPublished: editingBrteSession.isPublished,
+      });
+      if (res.error) {
+        toast.error(`Update failed: ${res.error}`);
+      } else {
+        toast.success("BRTE Session updated successfully!");
+        setBrteSessions(brteSessions.map((s) => (s.id === editingBrteSession.id ? editingBrteSession : s)));
+        setEditingBrteSession(null);
+        router.refresh();
+      }
+    });
+  }
+
+  function handleDeleteBrteSession(id: string) {
+    if (!confirm("Are you sure you want to delete this BRTE session?")) return;
+    startTransition(async () => {
+      const res = await deleteBrteSessionAction(id);
+      if (res.error) {
+        toast.error(`Delete failed: ${res.error}`);
+      } else {
+        toast.success("BRTE Session deleted successfully!");
+        setBrteSessions(brteSessions.filter((s) => s.id !== id));
+        router.refresh();
+      }
+    });
+  }
+
+  function handleExportBrteSessionExcel(sessionId: string, sessionTitle: string) {
+    setExportingBrteSessionId(sessionId);
+    startTransition(async () => {
+      const res = await exportBrteAttendanceExcelAction(sessionId);
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setExportingBrteSessionId(null);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported BRTE attendance for "${sessionTitle}" (${res.count} BRTEs)!`);
+        setExportingBrteSessionId(null);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // SCHOOL HANDLERS
+  // ---------------------------------------------------------------------------
+
   function handleAddSchool(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
@@ -294,7 +490,16 @@ export default function AdminDashboardClient({
       } else {
         toast.success("School added successfully!");
         setIsAddSchoolOpen(false);
-        setNewSchoolData({ udise: "", name: "", educationDistrict: "MADURAI", block: "", schoolType: "Government", management: "", category: "", categoryType: null });
+        setNewSchoolData({
+          udise: "",
+          name: "",
+          educationDistrict: "MADURAI",
+          block: "",
+          schoolType: "Government",
+          management: "",
+          category: "",
+          categoryType: null,
+        });
         router.refresh();
       }
     });
@@ -353,26 +558,6 @@ export default function AdminDashboardClient({
     });
   }
 
-  function handleExportSessionExcel(sessionId: string, title: string) {
-    setExportingSessionId(sessionId);
-    startTransition(async () => {
-      const res = await exportAttendanceExcelAction(sessionId);
-      if (res.error || !res.base64 || !res.filename) {
-        toast.error(`Export failed: ${res.error}`);
-        setExportingSessionId(null);
-      } else {
-        const link = document.createElement("a");
-        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
-        link.download = res.filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success(`Exported attendance for "${title}" (${res.count} schools)!`);
-        setExportingSessionId(null);
-      }
-    });
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
       {/* ── Header Navbar ── */}
@@ -383,11 +568,11 @@ export default function AdminDashboardClient({
               <Landmark className="w-5 h-5" />
             </div>
             <div className="truncate">
-              <span className="font-bold text-base tracking-tight text-gray-900 block leading-tight truncate">
-                NMMS Admin Portal
+              <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-tight truncate">
+                CEO - Madurai
               </span>
-              <span className="text-xs font-medium tracking-wide text-gray-500 uppercase truncate block">
-                Admin Dashboard
+              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider block truncate">
+                Gmeet Attendance Portal (Admin)
               </span>
             </div>
           </div>
@@ -425,8 +610,10 @@ export default function AdminDashboardClient({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-2 overflow-x-auto py-2.5">
           {[
             { id: "overview", label: "Dashboard", icon: Layers },
-            { id: "sessions", label: "Sessions", icon: Video },
-            { id: "new-session", label: "New Session", icon: Plus },
+            { id: "sessions", label: "NMMS Sessions", icon: Video },
+            { id: "new-session", label: "New NMMS Session", icon: Plus },
+            { id: "brte-sessions", label: "BRTE Sessions", icon: BookOpen },
+            { id: "new-brte-session", label: "New BRTE Session", icon: Plus },
             { id: "schools", label: "Schools", icon: SchoolIcon },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -455,7 +642,7 @@ export default function AdminDashboardClient({
         {/* ── TAB 1: OVERVIEW ── */}
         {activeTab === "overview" && (
           <div className="space-y-6 animate-fade-up">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
                   <div className="space-y-1">
@@ -471,7 +658,7 @@ export default function AdminDashboardClient({
               <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Sessions</p>
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">NMMS Sessions</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900">{sessions.length}</p>
                   </div>
                   <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,56%,24%)]/10 text-[hsl(213,56%,24%)] shrink-0">
@@ -479,16 +666,64 @@ export default function AdminDashboardClient({
                   </div>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">BRTE Sessions</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{brteSessions.length}</p>
+                  </div>
+                  <div className="p-2 sm:p-3 rounded-lg bg-purple-50 text-purple-600 shrink-0">
+                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
               <h2 className="text-lg font-bold text-gray-900">Recent Sessions Overview</h2>
-              <Button onClick={() => setActiveTab("new-session")} className="w-full sm:w-auto gap-2">
-                <Plus className="w-4 h-4" /> Schedule Session
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={handleExportConsolidatedAttendance}
+                  disabled={isExportingConsolidated || sessions.length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                >
+                  {isExportingConsolidated ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  Export Master Schools Matrix
+                </Button>
+                <Button
+                  onClick={handleExportConsolidatedBrteAttendance}
+                  disabled={isExportingConsolidatedBrte || brteSessions.length === 0}
+                  className="bg-purple-700 hover:bg-purple-800 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                >
+                  {isExportingConsolidatedBrte ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  Export Master BRTE Matrix
+                </Button>
+                <Button onClick={() => setActiveTab("new-session")} className="gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule NMMS Session
+                </Button>
+                <Button onClick={() => setActiveTab("new-brte-session")} variant="outline" className="gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule BRTE Session
+                </Button>
+              </div>
             </div>
 
+            {/* NMMS Sessions summary table */}
             <Card>
+              <CardHeader className="py-4 border-b border-gray-100 bg-gray-50/50">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Video className="w-4 h-4 text-blue-600" />
+                  NMMS Sessions
+                </CardTitle>
+              </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table className="min-w-[700px]">
@@ -503,7 +738,7 @@ export default function AdminDashboardClient({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions.map((s) => {
+                      {sessions.slice(0, 5).map((s) => {
                         const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
                         const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
                         return (
@@ -556,54 +791,170 @@ export default function AdminDashboardClient({
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                                onClick={() => handleExportSessionExcel(s.id, s.title)}
+                                disabled={exportingSessionId === s.id}
+                              >
+                                {exportingSessionId === s.id ? (
+                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Download className="w-3 h-3 mr-1" />
+                                )}
+                                Export
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="icon" variant="ghost" onClick={() => setEditingSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* BRTE Sessions summary */}
+            {brteSessions.length > 0 && (
+              <Card>
+                <CardHeader className="py-4 border-b border-gray-100 bg-gray-50/50">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-purple-600" />
+                    BRTE Sessions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[700px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Date & Time</TableHead>
+                          <TableHead>Google Meet Link</TableHead>
+                          <TableHead>Target Blocks</TableHead>
+                          <TableHead>Exports</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {brteSessions.slice(0, 5).map((s) => {
+                          const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                          const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                          return (
+                            <TableRow key={s.id}>
+                              <TableCell className="font-semibold text-gray-900">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate max-w-[200px]">{s.title}</span>
+                                  {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-gray-900">
+                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                </div>
+                                {formattedTime && (
+                                  <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
+                                    <Clock className="w-3 h-3" /> {formattedTime}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {expired ? (
+                                  <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                                ) : (
+                                  <a
+                                    href={s.generalMeetUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
+                                  >
+                                    Open Meet <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {(!s.blockRules || s.blockRules.length === 0) ? (
+                                  <Badge variant="secondary">All BRTEs</Badge>
+                                ) : (
+                                  <div className="flex gap-1 flex-wrap max-w-[220px]">
+                                    {s.blockRules.map((r: any) => (
+                                      <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
                                 <Button
                                   size="sm"
-                                  className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                                  onClick={() => handleExportSessionExcel(s.id, s.title)}
-                                  disabled={exportingSessionId === s.id}
+                                  className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                                  onClick={() => handleExportBrteSessionExcel(s.id, s.title)}
+                                  disabled={exportingBrteSessionId === s.id}
                                 >
-                                  {exportingSessionId === s.id ? (
+                                  {exportingBrteSessionId === s.id ? (
                                     <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
                                   ) : (
                                     <Download className="w-3 h-3 mr-1" />
                                   )}
                                   Export
                                 </Button>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => setEditingSession({ ...s })} className="h-8 w-8 text-gray-500">
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button size="icon" variant="ghost" onClick={() => setEditingBrteSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
-        {/* ── TAB 2: SESSIONS LIST ── */}
+        {/* ── TAB 2: NMMS SESSIONS LIST ── */}
         {activeTab === "sessions" && (
           <div className="space-y-6 animate-fade-up">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Training Sessions</h2>
-                <p className="text-sm text-gray-500">Manage all scheduled sessions and export attendance.</p>
+                <h2 className="text-lg font-bold text-gray-900">NMMS Training Sessions</h2>
+                <p className="text-sm text-gray-500">Manage NMMS sessions and export attendance.</p>
               </div>
-              <Button onClick={() => setActiveTab("new-session")} className="w-full sm:w-auto gap-2">
-                <Plus className="w-4 h-4" /> Schedule New Session
-              </Button>
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <Button
+                  onClick={handleExportConsolidatedAttendance}
+                  disabled={isExportingConsolidated || sessions.length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                >
+                  {isExportingConsolidated ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  Export Master Schools Matrix
+                </Button>
+                <Button onClick={() => setActiveTab("new-session")} className="w-full sm:w-auto gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule NMMS Session
+                </Button>
+              </div>
             </div>
 
             <Card>
@@ -674,21 +1025,19 @@ export default function AdminDashboardClient({
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                                  onClick={() => handleExportSessionExcel(s.id, s.title)}
-                                  disabled={exportingSessionId === s.id}
-                                >
-                                  {exportingSessionId === s.id ? (
-                                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                                  ) : (
-                                    <Download className="w-3 h-3 mr-1" />
-                                  )}
-                                  Export Excel
-                                </Button>
-                              </div>
+                              <Button
+                                size="sm"
+                                className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                                onClick={() => handleExportSessionExcel(s.id, s.title)}
+                                disabled={exportingSessionId === s.id}
+                              >
+                                {exportingSessionId === s.id ? (
+                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Download className="w-3 h-3 mr-1" />
+                                )}
+                                Export Excel
+                              </Button>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
@@ -711,12 +1060,12 @@ export default function AdminDashboardClient({
           </div>
         )}
 
-        {/* ── TAB 3: CREATE NEW SESSION ── */}
+        {/* ── TAB 3: CREATE NEW NMMS SESSION ── */}
         {activeTab === "new-session" && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
             <Card>
               <CardHeader className="border-b border-gray-100 bg-gray-50/50">
-                <CardTitle>Schedule Session</CardTitle>
+                <CardTitle>Schedule NMMS Session</CardTitle>
                 <CardDescription>
                   Create a new training schedule and specify target school categories.
                 </CardDescription>
@@ -724,7 +1073,7 @@ export default function AdminDashboardClient({
               <CardContent className="pt-6">
                 <form onSubmit={handleCreateSession} className="space-y-5">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-gray-700">Session Title <span className="text-red-500">*</span></label>
+                    <label className="text-sm font-semibold text-gray-700">NMMS Session Title <span className="text-red-500">*</span></label>
                     <Input placeholder="e.g. NMMS Orientation Session 1" value={title} onChange={(e) => setTitle(e.target.value)} required />
                   </div>
 
@@ -873,7 +1222,235 @@ export default function AdminDashboardClient({
           </div>
         )}
 
-        {/* ── TAB 4: SCHOOLS DIRECTORY ── */}
+        {/* ── TAB 4: BRTE SESSIONS LIST ── */}
+        {activeTab === "brte-sessions" && (
+          <div className="space-y-6 animate-fade-up">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">BRTE Training Sessions</h2>
+                <p className="text-sm text-gray-500">Manage BRTE sessions and export BRTE attendance.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <Button
+                  onClick={handleExportConsolidatedBrteAttendance}
+                  disabled={isExportingConsolidatedBrte || brteSessions.length === 0}
+                  className="bg-purple-700 hover:bg-purple-800 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                >
+                  {isExportingConsolidatedBrte ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  Export Master BRTE Matrix
+                </Button>
+                <Button onClick={() => setActiveTab("new-brte-session")} className="w-full sm:w-auto gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule BRTE Session
+                </Button>
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Google Meet Link</TableHead>
+                        <TableHead>Target Blocks</TableHead>
+                        <TableHead>Exports</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {brteSessions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                            No BRTE sessions scheduled yet. Click &quot;Schedule BRTE Session&quot; to create one.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        brteSessions.map((s) => {
+                          const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                          const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                          return (
+                            <TableRow key={s.id}>
+                              <TableCell className="font-semibold text-gray-900">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate max-w-[200px]">{s.title}</span>
+                                  {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-gray-900">
+                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                </div>
+                                {formattedTime && (
+                                  <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
+                                    <Clock className="w-3 h-3" /> {formattedTime}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {expired ? (
+                                  <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                                ) : (
+                                  <a
+                                    href={s.generalMeetUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
+                                  >
+                                    Open Meet <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {(!s.blockRules || s.blockRules.length === 0) ? (
+                                  <Badge variant="secondary">All BRTEs</Badge>
+                                ) : (
+                                  <div className="flex gap-1 flex-wrap max-w-[220px]">
+                                    {s.blockRules.map((r: any) => (
+                                      <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                                  onClick={() => handleExportBrteSessionExcel(s.id, s.title)}
+                                  disabled={exportingBrteSessionId === s.id}
+                                >
+                                  {exportingBrteSessionId === s.id ? (
+                                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Download className="w-3 h-3 mr-1" />
+                                  )}
+                                  Export Excel
+                                </Button>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button size="icon" variant="ghost" onClick={() => setEditingBrteSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ── TAB 5: CREATE NEW BRTE SESSION ── */}
+        {activeTab === "new-brte-session" && (
+          <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
+            <Card>
+              <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+                <CardTitle>Schedule BRTE Session</CardTitle>
+                <CardDescription>
+                  Create a new training session exclusively for BRTEs with optional block targeting.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <form onSubmit={handleCreateBrteSession} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-gray-700">BRTE Session Title <span className="text-red-500">*</span></label>
+                    <Input placeholder="e.g. BRTE Monthly Review & NMMS Planning" value={brteTitle} onChange={(e) => setBrteTitle(e.target.value)} required />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-gray-700">Description</label>
+                    <Input placeholder="Brief agenda or instructions for BRTEs" value={brteDescription} onChange={(e) => setBrteDescription(e.target.value)} />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5 sm:col-span-1">
+                      <label className="text-sm font-semibold text-gray-700">Date <span className="text-red-500">*</span></label>
+                      <Input type="date" value={brteSessionDate} onChange={(e) => setBrteSessionDate(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700">Start Time</label>
+                      <Input type="time" value={brteStartTime} onChange={(e) => setBrteStartTime(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700">End Time</label>
+                      <Input type="time" value={brteEndTime} onChange={(e) => setBrteEndTime(e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-gray-700">Google Meet URL <span className="text-red-500">*</span></label>
+                    <Input placeholder="https://meet.google.com/abc-defg-hij" value={brteMeetUrl} onChange={(e) => setBrteMeetUrl(e.target.value)} required />
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-gray-100">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Target BRTE Blocks (Optional)</label>
+                      {availableBrteBlocks.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No BRTE blocks found in database.</p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
+                          {availableBrteBlocks.map((blk) => {
+                            const isSelected = selectedBrteBlocks.includes(blk);
+                            return (
+                              <div
+                                key={blk}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedBrteBlocks(selectedBrteBlocks.filter((b) => b !== blk));
+                                  } else {
+                                    setSelectedBrteBlocks([...selectedBrteBlocks, blk]);
+                                  }
+                                }}
+                                className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                                  isSelected
+                                    ? "bg-purple-50 border-purple-600 text-purple-900"
+                                    : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-purple-600 bg-purple-600 text-white" : "border-gray-300 bg-white"}`}>
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <div className="text-xs font-semibold truncate">{blk}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-500 pt-1">
+                      {selectedBrteBlocks.length === 0
+                        ? "No block filters selected. Session will be visible to ALL active BRTEs."
+                        : `Targeting BRTEs in ${selectedBrteBlocks.length} block(s): ${selectedBrteBlocks.join(", ")}.`}
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button type="submit" className="w-full" disabled={isPending}>
+                      {isPending ? "Creating..." : "Save BRTE Session"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ── TAB 6: SCHOOLS DIRECTORY ── */}
         {activeTab === "schools" && (
           <div className="space-y-6 animate-fade-up">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1098,18 +1675,18 @@ export default function AdminDashboardClient({
         </div>
       )}
 
-      {/* EDIT SESSION MODAL */}
+      {/* EDIT NMMS SESSION MODAL */}
       {editingSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md shadow-2xl border-0">
             <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-lg">Edit Session</CardTitle>
+              <CardTitle className="text-lg">Edit NMMS Session</CardTitle>
               <button onClick={() => setEditingSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleUpdateSession} className="space-y-4 text-sm">
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-gray-700">Session Title</label>
+                  <label className="font-semibold text-gray-700">NMMS Session Title</label>
                   <Input value={editingSession.title ?? ""} onChange={(e) => setEditingSession({ ...editingSession, title: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
@@ -1119,6 +1696,272 @@ export default function AdminDashboardClient({
                 <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
               </form>
             </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* EDIT BRTE SESSION MODAL */}
+      {editingBrteSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-2xl border-0">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">Edit BRTE Session</CardTitle>
+              <button onClick={() => setEditingBrteSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handleUpdateBrteSession} className="space-y-4 text-sm">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Session Title</label>
+                  <Input value={editingBrteSession.title ?? ""} onChange={(e) => setEditingBrteSession({ ...editingBrteSession, title: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Google Meet URL</label>
+                  <Input value={editingBrteSession.generalMeetUrl ?? ""} onChange={(e) => setEditingBrteSession({ ...editingBrteSession, generalMeetUrl: e.target.value })} />
+                </div>
+                <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      {/* EXPORT MASTER SCHOOLS MATRIX FILTER MODAL */}
+      {isExportSchoolsMatrixOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] shadow-2xl border-0 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/30 flex flex-row items-center justify-between py-4 px-6 shrink-0">
+              <div>
+                <CardTitle className="text-lg text-emerald-950 flex items-center gap-2">
+                  <Download className="w-5 h-5 text-emerald-600" /> Export Master Schools Matrix
+                </CardTitle>
+                <CardDescription className="text-xs text-emerald-800/80 mt-0.5">
+                  Filter by Category Types, School Types, and Blocks before exporting.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setExportFilterCategories(CATEGORY_TYPE_OPTIONS.map((c) => c.id));
+                    setExportFilterSchoolTypes([...availableSchoolTypes]);
+                    setExportFilterBlocks([...availableBlocks]);
+                  }}
+                  className="h-8 text-xs font-semibold border-emerald-300 text-emerald-800 hover:bg-emerald-100/50 bg-white"
+                >
+                  Select All Filters
+                </Button>
+                <button
+                  onClick={() => setIsExportSchoolsMatrixOpen(false)}
+                  className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-5 px-6 space-y-5 overflow-y-auto flex-1">
+              {/* FILTER 1: SCHOOL CATEGORY TYPES */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
+                    1. Target School Category Types
+                    <Badge variant="secondary" className="text-[10px] font-semibold">
+                      {exportFilterCategories.length}/{CATEGORY_TYPE_OPTIONS.length}
+                    </Badge>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setExportFilterCategories(CATEGORY_TYPE_OPTIONS.map((c) => c.id))}
+                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                  >
+                    Select All
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {CATEGORY_TYPE_OPTIONS.map((cat) => {
+                    const isSelected = exportFilterCategories.includes(cat.id);
+                    return (
+                      <div
+                        key={cat.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setExportFilterCategories(exportFilterCategories.filter((c) => c !== cat.id));
+                          } else {
+                            setExportFilterCategories([...exportFilterCategories, cat.id]);
+                          }
+                        }}
+                        className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                          isSelected
+                            ? "bg-emerald-50 border-emerald-600 text-emerald-950 shadow-xs"
+                            : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
+                            isSelected ? "border-emerald-600 bg-emerald-600 text-white" : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                        <div className="text-xs font-semibold">{cat.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* FILTER 2: SCHOOL TYPES */}
+              <div className="space-y-2.5 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
+                    2. Target School Types
+                    <Badge variant="secondary" className="text-[10px] font-semibold">
+                      {exportFilterSchoolTypes.length}/{availableSchoolTypes.length}
+                    </Badge>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setExportFilterSchoolTypes([...availableSchoolTypes])}
+                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                  >
+                    Select All
+                  </button>
+                </div>
+                {availableSchoolTypes.length === 0 ? (
+                  <p className="text-xs text-gray-500 italic">No school type options found in database.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {availableSchoolTypes.map((st) => {
+                      const isSelected = exportFilterSchoolTypes.includes(st);
+                      return (
+                        <div
+                          key={st}
+                          onClick={() => {
+                            if (isSelected) {
+                              setExportFilterSchoolTypes(exportFilterSchoolTypes.filter((s) => s !== st));
+                            } else {
+                              setExportFilterSchoolTypes([...exportFilterSchoolTypes, st]);
+                            }
+                          }}
+                          className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                            isSelected
+                              ? "bg-purple-50 border-purple-600 text-purple-950 shadow-xs"
+                              : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <div
+                            className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
+                              isSelected ? "border-purple-600 bg-purple-600 text-white" : "border-gray-300 bg-white"
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </div>
+                          <div className="text-xs font-semibold truncate">{st}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* FILTER 3: SCHOOL BLOCKS */}
+              <div className="space-y-2.5 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
+                    3. Target School Blocks
+                    <Badge variant="secondary" className="text-[10px] font-semibold">
+                      {exportFilterBlocks.length}/{availableBlocks.length}
+                    </Badge>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setExportFilterBlocks([...availableBlocks])}
+                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                  >
+                    Select All
+                  </button>
+                </div>
+                {availableBlocks.length === 0 ? (
+                  <p className="text-xs text-gray-500 italic">No block options found in database.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {availableBlocks.map((blk) => {
+                      const isSelected = exportFilterBlocks.includes(blk);
+                      return (
+                        <div
+                          key={blk}
+                          onClick={() => {
+                            if (isSelected) {
+                              setExportFilterBlocks(exportFilterBlocks.filter((b) => b !== blk));
+                            } else {
+                              setExportFilterBlocks([...exportFilterBlocks, blk]);
+                            }
+                          }}
+                          className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2 ${
+                            isSelected
+                              ? "bg-amber-50 border-amber-600 text-amber-950 shadow-xs"
+                              : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <div
+                            className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
+                              isSelected ? "border-amber-600 bg-amber-600 text-white" : "border-gray-300 bg-white"
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </div>
+                          <div className="text-xs font-semibold truncate">{blk}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* VALIDATION & INTERSECTION STATUS */}
+              {(exportFilterCategories.length + exportFilterSchoolTypes.length + exportFilterBlocks.length === 0) ? (
+                <div className="rounded-lg bg-blue-50/80 border border-blue-200 p-3 text-xs text-blue-900 flex items-center gap-2">
+                  <span>ℹ️ Select any option(s) to filter by strict intersection, or click <strong>&quot;Select All Filters&quot;</strong> to export all schools.</span>
+                </div>
+              ) : (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <span className="font-semibold text-emerald-900">Strict Intersection (AND):</span>
+                  <span className="font-medium text-emerald-800">
+                    {[
+                      exportFilterCategories.length > 0 ? `${exportFilterCategories.length} Category Type(s)` : null,
+                      exportFilterSchoolTypes.length > 0 ? `${exportFilterSchoolTypes.length} School Type(s)` : null,
+                      exportFilterBlocks.length > 0 ? `${exportFilterBlocks.length} Block(s)` : null,
+                    ].filter(Boolean).join(" • ")}
+                  </span>
+                </div>
+              )}
+            </CardContent>
+
+            <div className="p-4 px-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-2.5 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsExportSchoolsMatrixOpen(false)}
+                disabled={isExportingConsolidated}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmExportConsolidatedAttendance}
+                disabled={
+                  isExportingConsolidated ||
+                  exportFilterCategories.length + exportFilterSchoolTypes.length + exportFilterBlocks.length === 0
+                }
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2 shadow-xs"
+              >
+                {isExportingConsolidated ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                Download Matrix (.xlsx)
+              </Button>
+            </div>
           </Card>
         </div>
       )}

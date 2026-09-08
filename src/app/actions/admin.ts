@@ -396,7 +396,7 @@ export async function exportAttendanceExcelAction(
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = "NMMS Portal";
+    workbook.creator = "CEO - Madurai | Gmeet Attendance Portal";
     workbook.created = new Date();
     
     const sheet = workbook.addWorksheet("Attendance", {
@@ -418,7 +418,17 @@ export async function exportAttendanceExcelAction(
     
     sheet.getRow(1).font = { bold: true };
 
-    eligibleSchools.forEach((sc, idx) => {
+    // Order: ABSENT schools first, then PRESENT schools. Alphabetical by name within each group.
+    const sortedSchools = [...eligibleSchools].sort((a, b) => {
+      const aPresent = a.teachers[0]?.attendance?.[0]?.status === "present";
+      const bPresent = b.teachers[0]?.attendance?.[0]?.status === "present";
+
+      if (!aPresent && bPresent) return -1;
+      if (aPresent && !bPresent) return 1;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+
+    sortedSchools.forEach((sc, idx) => {
       const teacher = sc.teachers[0];
       const attendanceRecord = teacher?.attendance?.[0];
       const isPresent = attendanceRecord?.status === "present";
@@ -452,7 +462,7 @@ export async function exportAttendanceExcelAction(
     const buffer = await workbook.xlsx.writeBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
     const safeTitle = targetSession.title.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `NMMS_${safeTitle}_Attendance.xlsx`;
+    const filename = `CEO_Madurai_${safeTitle}_Attendance.xlsx`;
 
     return {
       base64,
@@ -462,6 +472,243 @@ export async function exportAttendanceExcelAction(
   } catch (err: any) {
     console.error("exportAttendanceExcelAction error:", err);
     return { error: err.message ?? "Export failed." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4B. EXPORT CONSOLIDATED ALL SESSIONS ATTENDANCE MATRIX
+// ---------------------------------------------------------------------------
+
+export async function exportConsolidatedAttendanceExcelAction(filters?: {
+  categoryTypes?: CategoryType[];
+  schoolTypes?: string[];
+  blocks?: string[];
+}): Promise<{
+  base64?: string;
+  filename?: string;
+  count?: number;
+  error?: string;
+}> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    const allSessions = await prisma.session.findMany({
+      include: {
+        categoryRules: true,
+        schoolTypeRules: true,
+        blockRules: true,
+      },
+      orderBy: { sessionDate: "asc" },
+    });
+
+    if (allSessions.length === 0) {
+      return { error: "No NMMS training sessions found to export." };
+    }
+
+    const schoolFilter: any = { isActive: true };
+    if (filters?.categoryTypes && filters.categoryTypes.length > 0) {
+      schoolFilter.categoryType = { in: filters.categoryTypes };
+    }
+    if (filters?.schoolTypes && filters.schoolTypes.length > 0) {
+      schoolFilter.schoolType = { in: filters.schoolTypes };
+    }
+    if (filters?.blocks && filters.blocks.length > 0) {
+      schoolFilter.block = { in: filters.blocks };
+    }
+
+    const allSchools = await prisma.school.findMany({
+      where: schoolFilter,
+      include: {
+        teachers: {
+          where: { isActive: true },
+          take: 1,
+          include: {
+            attendance: {
+              select: { sessionId: true, status: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ block: "asc" }, { name: "asc" }],
+    });
+
+    if (allSchools.length === 0) {
+      return { error: "No schools found matching the selected filter criteria." };
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "CEO - Madurai | Gmeet Attendance Portal";
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet("Consolidated Attendance", {
+      properties: { tabColor: { argb: "FF0072C6" } },
+    });
+
+    // Build base columns
+    const columns: any[] = [
+      { header: "S.No", key: "sno", width: 8 },
+      { header: "UDISE Code", key: "udise", width: 16 },
+      { header: "School Name", key: "school", width: 38 },
+      { header: "School Type", key: "schoolType", width: 20 },
+      { header: "Management", key: "management", width: 28 },
+      { header: "Block", key: "block", width: 18 },
+      { header: "District", key: "district", width: 18 },
+      { header: "Category Type", key: "category", width: 24 },
+    ];
+
+    // Dynamic session columns (one column per session)
+    allSessions.forEach((s) => {
+      const dateStr = new Date(s.sessionDate).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const colHeader = `${s.title} (${dateStr})`;
+      columns.push({
+        header: colHeader,
+        key: `session_${s.id}`,
+        width: Math.max(22, Math.min(38, colHeader.length + 2)),
+      });
+    });
+
+    // Summary columns at the end
+    columns.push(
+      { header: "Total Present", key: "totalPresent", width: 16 },
+      { header: "Total Absent", key: "totalAbsent", width: 16 }
+    );
+
+    sheet.columns = columns;
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    sheet.getRow(1).height = 30;
+
+    // Helper to evaluate session targeting rules
+    function isSchoolEligible(school: any, targetSession: any): boolean {
+      if (targetSession.categoryRules && targetSession.categoryRules.length > 0) {
+        const cats = targetSession.categoryRules.map((r: any) => r.categoryType);
+        if (!school.categoryType || !cats.includes(school.categoryType)) return false;
+      }
+      if (targetSession.schoolTypeRules && targetSession.schoolTypeRules.length > 0) {
+        const types = targetSession.schoolTypeRules.map((r: any) => r.schoolType);
+        if (!school.schoolType || !types.includes(school.schoolType)) return false;
+      }
+      if (targetSession.blockRules && targetSession.blockRules.length > 0) {
+        const blks = targetSession.blockRules.map((r: any) => r.block);
+        if (!school.block || !blks.includes(school.block)) return false;
+      }
+      return true;
+    }
+
+    // Process each school and calculate totals
+    const evaluatedRows = allSchools.map((sc) => {
+      const teacher = sc.teachers[0];
+      const attendanceMap = new Map<string, string>();
+      if (teacher?.attendance) {
+        teacher.attendance.forEach((a: any) => {
+          attendanceMap.set(a.sessionId, a.status);
+        });
+      }
+
+      let totalPresent = 0;
+      let totalAbsent = 0;
+      const sessionValues: Record<string, string> = {};
+
+      allSessions.forEach((s) => {
+        const eligible = isSchoolEligible(sc, s);
+        if (!eligible) {
+          sessionValues[`session_${s.id}`] = "null";
+        } else {
+          const status = attendanceMap.get(s.id);
+          if (status === "present") {
+            sessionValues[`session_${s.id}`] = "PRESENT";
+            totalPresent++;
+          } else {
+            sessionValues[`session_${s.id}`] = "ABSENT";
+            totalAbsent++;
+          }
+        }
+      });
+
+      return {
+        school: sc,
+        sessionValues,
+        totalPresent,
+        totalAbsent,
+      };
+    });
+
+    // Order: schools with more absences first, then present, then alphabetical by name
+    evaluatedRows.sort((a, b) => {
+      if (b.totalAbsent !== a.totalAbsent) {
+        return b.totalAbsent - a.totalAbsent; // higher absences appear first
+      }
+      if (a.totalPresent !== b.totalPresent) {
+        return a.totalPresent - b.totalPresent;
+      }
+      return (a.school.name || "").localeCompare(b.school.name || "");
+    });
+
+    evaluatedRows.forEach((item, idx) => {
+      const sc = item.school;
+      const rowData: any = {
+        sno: idx + 1,
+        udise: sc.udise,
+        school: sc.name,
+        schoolType: sc.schoolType ?? "N/A",
+        management: sc.management ?? "N/A",
+        block: sc.block ?? "N/A",
+        district: sc.educationDistrict ?? "N/A",
+        category: sc.categoryType ? sc.categoryType.replace("_", " ") : "N/A",
+        ...item.sessionValues,
+        totalPresent: item.totalPresent,
+        totalAbsent: item.totalAbsent,
+      };
+
+      const row = sheet.addRow(rowData);
+
+      // Style session cells
+      allSessions.forEach((s) => {
+        const val = item.sessionValues[`session_${s.id}`];
+        const cell = row.getCell(`session_${s.id}`);
+        cell.alignment = { horizontal: "center" };
+        if (val === "PRESENT") {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFC6EFCE" } };
+          cell.font = { color: { argb: "FF006100" }, bold: true };
+        } else if (val === "ABSENT") {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFC7CE" } };
+          cell.font = { color: { argb: "FF9C0006" }, bold: true };
+        } else if (val === "null") {
+          cell.font = { color: { argb: "FF888888" }, italic: true };
+        }
+      });
+
+      // Style summary cells
+      const presCell = row.getCell("totalPresent");
+      presCell.font = { bold: true, color: { argb: "FF006100" } };
+      presCell.alignment = { horizontal: "center" };
+
+      const absCell = row.getCell("totalAbsent");
+      absCell.font = { bold: true, color: { argb: "FF9C0006" } };
+      absCell.alignment = { horizontal: "center" };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const filterSuffix = filters?.schoolTypes && filters.schoolTypes.length > 0 
+      ? `_${filters.schoolTypes.map((s: string) => s.replace(/[^a-zA-Z0-9]/g, "")).join("-")}`
+      : "";
+    const filename = `CEO_Madurai_NMMS_Master_Schools_Attendance_Matrix${filterSuffix}_${dateStamp}.xlsx`;
+
+    return {
+      base64,
+      filename,
+      count: allSchools.length,
+    };
+  } catch (err: any) {
+    console.error("exportConsolidatedAttendanceExcelAction error:", err);
+    return { error: err.message ?? "Consolidated export failed." };
   }
 }
 
@@ -505,5 +752,390 @@ export async function exportTrainersExcelAction(): Promise<{ base64?: string; fi
   } catch (err: any) {
     console.error("exportTrainersExcelAction error:", err);
     return { error: err.message ?? "Export failed." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. BRTE SESSION MUTATIONS
+// ---------------------------------------------------------------------------
+
+export interface CreateBrteSessionInput {
+  title: string;
+  description?: string;
+  sessionDate: string; // YYYY-MM-DD
+  startTime?: string;  // HH:mm (24hr format)
+  endTime?: string;    // HH:mm (24hr format)
+  generalMeetUrl: string;
+  blocks?: string[];   // Empty = all BRTEs
+}
+
+export async function createBrteSessionAction(
+  input: CreateBrteSessionInput
+): Promise<{ success?: true; createdSession?: any; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    const sessionDate = new Date(input.sessionDate);
+    const startTime = input.startTime ? new Date(`1970-01-01T${input.startTime}:00.000Z`) : null;
+    const endTime = input.endTime ? new Date(`1970-01-01T${input.endTime}:00.000Z`) : null;
+
+    const createdSession = await prisma.brteSession.create({
+      data: {
+        title: input.title,
+        description: input.description ?? null,
+        sessionDate,
+        startTime,
+        endTime,
+        generalMeetUrl: input.generalMeetUrl,
+        isPublished: true,
+        isAttendanceOpen: true,
+        createdByAdminId: session.id,
+        blockRules: {
+          create: (input.blocks || []).map((block) => ({ block })),
+        },
+      },
+      include: { blockRules: true },
+    });
+
+    return {
+      success: true,
+      createdSession: {
+        ...createdSession,
+        sessionDate: createdSession.sessionDate.toISOString(),
+        startTime: createdSession.startTime ? createdSession.startTime.toISOString() : null,
+        endTime: createdSession.endTime ? createdSession.endTime.toISOString() : null,
+        createdAt: createdSession.createdAt.toISOString(),
+      },
+    };
+  } catch (err: any) {
+    console.error("createBrteSessionAction error:", err);
+    return { error: err.message ?? "Failed to create BRTE session." };
+  }
+}
+
+export async function updateBrteSessionAction(
+  sessionId: string,
+  data: { title?: string; generalMeetUrl?: string; isAttendanceOpen?: boolean; isPublished?: boolean }
+): Promise<{ success?: true; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    await prisma.brteSession.update({ where: { id: sessionId }, data });
+    return { success: true };
+  } catch (err: any) {
+    console.error("updateBrteSessionAction error:", err);
+    return { error: err.message ?? "Failed to update BRTE session." };
+  }
+}
+
+export async function deleteBrteSessionAction(sessionId: string): Promise<{ success?: true; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    await prisma.brteSession.delete({ where: { id: sessionId } });
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message ?? "Failed to delete BRTE session." };
+  }
+}
+
+export async function markBrteAttendanceAction(
+  sessionId: string,
+  brteId: string,
+  status: AttendanceStatus = "present"
+): Promise<{ success?: true; error?: string }> {
+  try {
+    await prisma.brteAttendance.upsert({
+      where: { sessionId_brteId: { sessionId, brteId } },
+      update: { status, markedAt: new Date() },
+      create: { sessionId, brteId, status, markedAt: new Date() },
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message ?? "Failed to mark BRTE attendance." };
+  }
+}
+
+export async function exportBrteAttendanceExcelAction(
+  sessionId: string
+): Promise<{ base64?: string; filename?: string; count?: number; error?: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    const targetSession = await prisma.brteSession.findUnique({
+      where: { id: sessionId },
+      include: { blockRules: true },
+    });
+
+    if (!targetSession) return { error: "BRTE Session not found." };
+
+    const blocks = targetSession.blockRules.map((r) => r.block);
+
+    // Fetch all targeted BRTEs
+    const eligibleBrtes = await prisma.brte.findMany({
+      where: {
+        isActive: true,
+        ...(blocks.length > 0 ? { block: { in: blocks } } : {}),
+      },
+      include: {
+        attendance: {
+          where: { sessionId },
+          select: { status: true, markedAt: true },
+        },
+      },
+      orderBy: [{ block: "asc" }, { name: "asc" }],
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "CEO - Madurai | Gmeet Attendance Portal";
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet("BRTE Attendance", {
+      properties: { tabColor: { argb: "FF6B21A8" } },
+    });
+
+    sheet.columns = [
+      { header: "S.No", key: "sno", width: 8 },
+      { header: "BRTE EMIS ID", key: "emis", width: 15 },
+      { header: "BRTE Name", key: "name", width: 35 },
+      { header: "Block", key: "block", width: 20 },
+      { header: "Attendance Status", key: "status", width: 20 },
+      { header: "Marked Time", key: "markedAt", width: 15 },
+    ];
+
+    sheet.getRow(1).font = { bold: true };
+
+    // Order: ABSENT BRTEs first, then PRESENT BRTEs. Ordered by block and name within each group.
+    const sortedBrtes = [...eligibleBrtes].sort((a, b) => {
+      const aPresent = a.attendance?.[0]?.status === "present";
+      const bPresent = b.attendance?.[0]?.status === "present";
+
+      if (!aPresent && bPresent) return -1;
+      if (aPresent && !bPresent) return 1;
+      const blockComp = (a.block || "").localeCompare(b.block || "");
+      if (blockComp !== 0) return blockComp;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+
+    sortedBrtes.forEach((brte, idx) => {
+      const attendanceRecord = brte.attendance?.[0];
+      const isPresent = attendanceRecord?.status === "present";
+      const statusText = attendanceRecord ? (isPresent ? "PRESENT" : "ABSENT") : "ABSENT";
+
+      const row = sheet.addRow({
+        sno: idx + 1,
+        emis: brte.emis,
+        name: brte.name,
+        block: brte.block ?? "N/A",
+        status: statusText,
+        markedAt: attendanceRecord?.markedAt
+          ? new Date(attendanceRecord.markedAt).toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+              timeZone: "Asia/Kolkata",
+            })
+          : "—",
+      });
+
+      const statusCell = row.getCell("status");
+      statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: isPresent ? "FFC6EFCE" : "FFFFC7CE" } };
+      statusCell.font = { color: { argb: isPresent ? "FF006100" : "FF9C0006" }, bold: true };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const safeTitle = targetSession.title.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `CEO_Madurai_BRTE_${safeTitle}_Attendance.xlsx`;
+
+    return { base64, filename, count: eligibleBrtes.length };
+  } catch (err: any) {
+    console.error("exportBrteAttendanceExcelAction error:", err);
+    return { error: err.message ?? "Export failed." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6B. EXPORT CONSOLIDATED BRTE SESSIONS ATTENDANCE MATRIX
+// ---------------------------------------------------------------------------
+
+export async function exportConsolidatedBrteAttendanceExcelAction(): Promise<{
+  base64?: string;
+  filename?: string;
+  count?: number;
+  error?: string;
+}> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    const allBrteSessions = await prisma.brteSession.findMany({
+      include: { blockRules: true },
+      orderBy: { sessionDate: "asc" },
+    });
+
+    if (allBrteSessions.length === 0) {
+      return { error: "No BRTE training sessions found to export." };
+    }
+
+    const allBrtes = await prisma.brte.findMany({
+      where: { isActive: true },
+      include: {
+        attendance: {
+          select: { sessionId: true, status: true },
+        },
+      },
+      orderBy: [{ block: "asc" }, { name: "asc" }],
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "CEO - Madurai | Gmeet Attendance Portal";
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet("Consolidated BRTE Attendance", {
+      properties: { tabColor: { argb: "FF6B21A8" } },
+    });
+
+    // Build base columns
+    const columns: any[] = [
+      { header: "S.No", key: "sno", width: 8 },
+      { header: "BRTE EMIS ID", key: "emis", width: 16 },
+      { header: "BRTE Name", key: "name", width: 35 },
+      { header: "Block", key: "block", width: 20 },
+    ];
+
+    // Dynamic session columns (one column per BRTE session)
+    allBrteSessions.forEach((s) => {
+      const dateStr = new Date(s.sessionDate).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      const colHeader = `${s.title} (${dateStr})`;
+      columns.push({
+        header: colHeader,
+        key: `session_${s.id}`,
+        width: Math.max(22, Math.min(38, colHeader.length + 2)),
+      });
+    });
+
+    // Summary columns at the end
+    columns.push(
+      { header: "Total Present", key: "totalPresent", width: 16 },
+      { header: "Total Absent", key: "totalAbsent", width: 16 }
+    );
+
+    sheet.columns = columns;
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    sheet.getRow(1).height = 30;
+
+    // Process each BRTE and calculate totals
+    const evaluatedRows = allBrtes.map((brte) => {
+      const attendanceMap = new Map<string, string>();
+      if (brte.attendance) {
+        brte.attendance.forEach((a: any) => {
+          attendanceMap.set(a.sessionId, a.status);
+        });
+      }
+
+      let totalPresent = 0;
+      let totalAbsent = 0;
+      const sessionValues: Record<string, string> = {};
+
+      allBrteSessions.forEach((s) => {
+        const targetBlocks = s.blockRules.map((r: any) => r.block);
+        const isEligible = targetBlocks.length === 0 || (brte.block && targetBlocks.includes(brte.block));
+
+        if (!isEligible) {
+          sessionValues[`session_${s.id}`] = "null";
+        } else {
+          const status = attendanceMap.get(s.id);
+          if (status === "present") {
+            sessionValues[`session_${s.id}`] = "PRESENT";
+            totalPresent++;
+          } else {
+            sessionValues[`session_${s.id}`] = "ABSENT";
+            totalAbsent++;
+          }
+        }
+      });
+
+      return {
+        brte,
+        sessionValues,
+        totalPresent,
+        totalAbsent,
+      };
+    });
+
+    // Order: BRTEs with more absences first, then present, then alphabetical by name
+    evaluatedRows.sort((a, b) => {
+      if (b.totalAbsent !== a.totalAbsent) {
+        return b.totalAbsent - a.totalAbsent;
+      }
+      if (a.totalPresent !== b.totalPresent) {
+        return a.totalPresent - b.totalPresent;
+      }
+      return (a.brte.name || "").localeCompare(b.brte.name || "");
+    });
+
+    evaluatedRows.forEach((item, idx) => {
+      const brte = item.brte;
+      const rowData: any = {
+        sno: idx + 1,
+        emis: brte.emis,
+        name: brte.name,
+        block: brte.block ?? "N/A",
+        ...item.sessionValues,
+        totalPresent: item.totalPresent,
+        totalAbsent: item.totalAbsent,
+      };
+
+      const row = sheet.addRow(rowData);
+
+      // Style session cells
+      allBrteSessions.forEach((s) => {
+        const val = item.sessionValues[`session_${s.id}`];
+        const cell = row.getCell(`session_${s.id}`);
+        cell.alignment = { horizontal: "center" };
+        if (val === "PRESENT") {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFC6EFCE" } };
+          cell.font = { color: { argb: "FF006100" }, bold: true };
+        } else if (val === "ABSENT") {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFC7CE" } };
+          cell.font = { color: { argb: "FF9C0006" }, bold: true };
+        } else if (val === "null") {
+          cell.font = { color: { argb: "FF888888" }, italic: true };
+        }
+      });
+
+      // Style summary cells
+      const presCell = row.getCell("totalPresent");
+      presCell.font = { bold: true, color: { argb: "FF006100" } };
+      presCell.alignment = { horizontal: "center" };
+
+      const absCell = row.getCell("totalAbsent");
+      absCell.font = { bold: true, color: { argb: "FF9C0006" } };
+      absCell.alignment = { horizontal: "center" };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const filename = `CEO_Madurai_All_BRTE_Sessions_Consolidated_Attendance_${dateStamp}.xlsx`;
+
+    return {
+      base64,
+      filename,
+      count: allBrtes.length,
+    };
+  } catch (err: any) {
+    console.error("exportConsolidatedBrteAttendanceExcelAction error:", err);
+    return { error: err.message ?? "Consolidated BRTE export failed." };
   }
 }

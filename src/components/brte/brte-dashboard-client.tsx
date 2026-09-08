@@ -4,22 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { logoutAction } from "@/app/actions/auth";
-import { markMyAttendanceAction } from "@/app/actions/teacher";
+import { markMyBrteAttendanceAction } from "@/app/actions/brte";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableHeader,
   TableRow,
   TableHead,
   TableBody,
-  TableCell
+  TableCell,
 } from "@/components/ui/table";
 import {
-  GraduationCap,
   LogOut,
   Calendar,
   CheckCircle2,
@@ -27,36 +25,19 @@ import {
   BarChart3,
   Video,
   Clock,
-  Building2,
   MapPin,
-  Sparkles,
-  ExternalLink,
-  ShieldCheck,
   History,
-  Landmark
+  Landmark,
+  BookOpen,
 } from "lucide-react";
 
-interface TeacherDashboardClientProps {
-  teacher: {
+interface BrteDashboardClientProps {
+  brte: {
     id: string;
-    name: string | null;
-    mobile: string;
-    subject: string | null;
-    schoolUdise: string;
-    school: {
-      name: string;
-      udise: string;
-      block: string | null;
-      educationDistrict: string | null;
-      categoryType: string | null;
-      schoolType?: string | null;
-    };
-  };
-  stats: {
-    totalAttendance: number;
-    presentCount: number;
-    absentCount: number;
-    attendanceRate: number | null;
+    emis: string;
+    name: string;
+    block: string | null;
+    isActive: boolean;
   };
   assignedSessions: Array<{
     id: string;
@@ -97,7 +78,7 @@ function formatSessionTimeString(startTime?: string | null, endTime?: string | n
       timeZone: "UTC",
     });
     return `${start} - ${end}`;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -125,34 +106,26 @@ function isSessionExpired(sessionDateStr: string, endTimeStr?: string | null, st
     }
 
     const sessionEndTime = new Date(year, month, day, endHours, endMinutes, endSeconds, 999);
-    const now = new Date();
-
-    return now.getTime() > sessionEndTime.getTime();
-  } catch (e) {
+    return new Date().getTime() > sessionEndTime.getTime();
+  } catch {
     return false;
   }
 }
 
-export default function TeacherDashboardClient({
-  teacher,
-  stats: initialStats,
+export default function BrteDashboardClient({
+  brte,
   assignedSessions: initialAssignedSessions,
-  recentAttendance: initialRecentAttendance,
-}: TeacherDashboardClientProps) {
+  recentAttendance,
+}: BrteDashboardClientProps) {
   const router = useRouter();
   const [assignedSessions, setAssignedSessions] = useState(initialAssignedSessions);
   const [isPending, startTransition] = useTransition();
 
-  const initials = teacher.name
-    ? teacher.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "TC";
+  const initials = brte.name
+    ? brte.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "BR";
 
-  // Dynamic calculation of stats including expired missed sessions
+  // Dynamic stats
   let presentCount = 0;
   let missedCount = 0;
   const combinedHistory: Array<{
@@ -190,9 +163,7 @@ export default function TeacherDashboardClient({
 
   const totalEvaluatedSessions = presentCount + missedCount;
   const attendanceRate =
-    totalEvaluatedSessions > 0
-      ? Math.round((presentCount / totalEvaluatedSessions) * 100)
-      : null;
+    totalEvaluatedSessions > 0 ? Math.round((presentCount / totalEvaluatedSessions) * 100) : null;
 
   function handleJoinAndMark(sessionId: string, generalMeetUrl: string, isExpired: boolean) {
     if (isExpired) {
@@ -200,12 +171,12 @@ export default function TeacherDashboardClient({
       return;
     }
 
-    // 1. Open Google Meet link in new tab immediately
+    // Open Google Meet link in new tab immediately
     window.open(generalMeetUrl, "_blank", "noopener,noreferrer");
 
-    // 2. Mark attendance as present on server
+    // Mark attendance as present on server
     startTransition(async () => {
-      const res = await markMyAttendanceAction(sessionId);
+      const res = await markMyBrteAttendanceAction(sessionId);
       if (res.error) {
         toast.error(`Could not record attendance: ${res.error}`);
       } else {
@@ -213,10 +184,7 @@ export default function TeacherDashboardClient({
         setAssignedSessions(
           assignedSessions.map((s) =>
             s.id === sessionId
-              ? {
-                  ...s,
-                  userAttendance: { status: "present", markedAt: new Date().toISOString() },
-                }
+              ? { ...s, userAttendance: { status: "present", markedAt: new Date().toISOString() } }
               : s
           )
         );
@@ -250,22 +218,13 @@ export default function TeacherDashboardClient({
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <div className="hidden sm:block text-left">
-                <div className="text-sm font-semibold text-gray-900 leading-tight">
-                  {teacher.name ?? "Teacher"}
-                </div>
-                <div className="text-xs text-gray-500 font-medium">
-                  UDISE: {teacher.schoolUdise}
-                </div>
+                <div className="text-sm font-semibold text-gray-900 leading-tight">{brte.name}</div>
+                <div className="text-xs text-gray-500 font-medium">EMIS: {brte.emis}</div>
               </div>
             </div>
 
             <form action={logoutAction}>
-              <Button
-                variant="outline"
-                size="sm"
-                type="submit"
-                className="gap-2 text-xs h-9 text-gray-600 font-semibold"
-              >
+              <Button variant="outline" size="sm" type="submit" className="gap-2 text-xs h-9 text-gray-600 font-semibold">
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sign Out</span>
               </Button>
@@ -281,40 +240,27 @@ export default function TeacherDashboardClient({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-bold text-blue-700 uppercase tracking-wide">
+                <BookOpen className="w-4 h-4" />
                 CEO - Madurai | Gmeet Attendance Portal
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
-                {teacher.name ?? "Teacher"}
+                {brte.name}
               </h1>
               <div className="text-gray-600 font-medium flex flex-wrap items-center gap-x-3 gap-y-2 text-sm pt-1">
-                <span className="flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-gray-400" />
-                  {teacher.school.name}
-                </span>
-                <span className="text-gray-300 hidden sm:inline">|</span>
-                <span className="font-mono text-gray-500">
-                  UDISE: {teacher.schoolUdise}
-                </span>
+                <span className="font-mono text-gray-500">EMIS ID: {brte.emis}</span>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2 md:pt-0">
-              {teacher.school.categoryType && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 w-fit">
-                  {teacher.school.categoryType.replace("_", " ")}
+              {brte.block && (
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-200 w-fit">
+                  <MapPin className="w-3 h-3 mr-1 text-emerald-500" />
+                  {brte.block}
                 </Badge>
               )}
-              {teacher.school.schoolType && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 w-fit">
-                  {teacher.school.schoolType}
-                </Badge>
-              )}
-              {teacher.school.block && (
-                <Badge variant="outline" className="bg-gray-50 text-gray-700 w-fit">
-                  <MapPin className="w-3 h-3 mr-1 text-gray-400" />
-                  {teacher.school.block}
-                </Badge>
-              )}
+              <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 w-fit">
+                BRTE
+              </Badge>
             </div>
           </div>
         </div>
@@ -327,9 +273,7 @@ export default function TeacherDashboardClient({
                 <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Total Sessions
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {totalEvaluatedSessions}
-                </p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{totalEvaluatedSessions}</p>
               </div>
               <div className="p-2 sm:p-3 rounded-lg bg-blue-50 text-blue-600 shrink-0">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -343,9 +287,7 @@ export default function TeacherDashboardClient({
                 <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Attended
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {presentCount}
-                </p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{presentCount}</p>
               </div>
               <div className="p-2 sm:p-3 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -359,9 +301,7 @@ export default function TeacherDashboardClient({
                 <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Missed
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {missedCount}
-                </p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{missedCount}</p>
               </div>
               <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600 shrink-0">
                 <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -386,16 +326,16 @@ export default function TeacherDashboardClient({
           </Card>
         </div>
 
-        {/* ── SCHEDULED NMMS TRAINING SESSIONS SECTION ── */}
+        {/* ── BRTE TRAINING SESSIONS SECTION ── */}
         <Card className="border-[hsl(213,56%,24%)]/20 shadow-md">
           <CardHeader className="bg-gray-50/50 border-b border-gray-100 flex flex-row items-center justify-between py-5">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Video className="w-5 h-5 text-[hsl(213,56%,24%)]" />
-                Training Sessions
+                BRTE Training Sessions
               </CardTitle>
               <CardDescription className="mt-1">
-                Sessions scheduled for your school category.
+                Sessions scheduled for your block.
               </CardDescription>
             </div>
             <Badge variant="secondary" className="font-bold">
@@ -410,7 +350,7 @@ export default function TeacherDashboardClient({
                   <Calendar className="w-6 h-6" />
                 </div>
                 <p className="text-base font-semibold text-gray-900">No scheduled sessions</p>
-                <p className="text-sm text-gray-500 mt-1">Check back later for upcoming training sessions.</p>
+                <p className="text-sm text-gray-500 mt-1">Check back later for upcoming BRTE training sessions.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -476,6 +416,7 @@ export default function TeacherDashboardClient({
                                 <Button
                                   onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired)}
                                   className="h-10 gap-2 font-bold shadow-sm"
+                                  disabled={isPending}
                                 >
                                   <Video className="w-4 h-4" />
                                   Join & Mark Present
