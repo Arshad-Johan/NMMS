@@ -503,7 +503,7 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
     });
 
     if (allSessions.length === 0) {
-      return { error: "No NMMS training sessions found to export." };
+      return { error: "No teachers training sessions found to export." };
     }
 
     const schoolFilter: any = { isActive: true };

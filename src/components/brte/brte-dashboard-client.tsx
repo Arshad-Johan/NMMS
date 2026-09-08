@@ -206,7 +206,7 @@ export default function BrteDashboardClient({
               <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-tight truncate">
                 CEO - Madurai
               </span>
-              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider block truncate">
+              <span className="text-xs font-bold text-black uppercase tracking-wider block truncate">
                 Gmeet Attendance Portal
               </span>
             </div>
@@ -239,7 +239,7 @@ export default function BrteDashboardClient({
         <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-bold text-blue-700 uppercase tracking-wide">
+              <div className="flex items-center gap-2 text-sm font-bold text-black uppercase tracking-wide">
                 <BookOpen className="w-4 h-4" />
                 CEO - Madurai | Gmeet Attendance Portal
               </div>

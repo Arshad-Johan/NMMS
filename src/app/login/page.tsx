@@ -130,7 +130,7 @@ export default function LoginPage() {
             <div className="font-extrabold text-xl tracking-tight text-gray-900 leading-tight">
               CEO - Madurai
             </div>
-            <div className="text-xs font-bold text-blue-700 tracking-wide uppercase">
+            <div className="text-xs font-bold text-black tracking-wide uppercase">
               Gmeet Attendance Portal
             </div>
           </div>
@@ -138,10 +138,10 @@ export default function LoginPage() {
 
         {/* Center Hero content */}
         <div className="relative z-10 my-auto max-w-md space-y-4">
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[hsl(213,56%,24%)] leading-tight">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-black leading-tight">
             Gmeet Attendance Portal
           </h1>
-          <div className="h-1.5 w-16 bg-blue-600 rounded-full" />
+          <div className="h-1.5 w-16 bg-black rounded-full" />
           <p className="text-gray-600 text-base font-medium leading-relaxed pt-2">
             Official portal for managing training sessions, tracking attendance, and organizing directory records across Madurai district.
           </p>
@@ -164,13 +164,13 @@ export default function LoginPage() {
             </div>
             <div>
               <div className="font-extrabold text-xl tracking-tight text-gray-900">CEO - Madurai</div>
-              <div className="text-xs font-bold text-blue-700 uppercase tracking-wider">Gmeet Attendance Portal</div>
+              <div className="text-xs font-bold text-black uppercase tracking-wider">Gmeet Attendance Portal</div>
             </div>
           </div>
 
           <Card className="border-gray-200 bg-white shadow-lg shadow-gray-200/50 rounded-xl overflow-hidden">
             <div className="bg-gray-50/80 border-b border-gray-100 p-4 sm:p-6 pb-4">
-              {/* Login Mode Selector Tabs — 2 tabs: UDISE-NMMS | BRTE */}
+              {/* Login Mode Selector Tabs — 2 tabs: Teacher Login | BRTE */}
               <div className="grid grid-cols-2 p-1 gap-1 bg-gray-200/60 rounded-lg mb-6">
                 <button
                   type="button"
@@ -182,7 +182,7 @@ export default function LoginPage() {
                   }`}
                 >
                   <School className="w-3.5 h-3.5" />
-                  UDISE-NMMS
+                  Teacher Login
                 </button>
                 <button
                   type="button"
@@ -200,7 +200,7 @@ export default function LoginPage() {
 
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl font-bold tracking-tight text-gray-900">
-                  {loginMode === "teacher" ? "UDISE-NMMS Sign In" : loginMode === "brte" ? "BRTE Sign In" : "Admin Sign In"}
+                  {loginMode === "teacher" ? "Teacher Login" : loginMode === "brte" ? "BRTE Sign In" : "Admin Sign In"}
                 </CardTitle>
                 <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
                   {loginMode === "admin" ? "Authorized" : "Device Locked"}
@@ -369,7 +369,7 @@ export default function LoginPage() {
                     }}
                     className="w-full text-center text-xs text-gray-500 hover:text-gray-800 font-semibold pt-1 transition-colors"
                   >
-                    ← Back to UDISE-NMMS / BRTE Login
+                    ← Back to Teacher / BRTE Login
                   </button>
                 </form>
               )}

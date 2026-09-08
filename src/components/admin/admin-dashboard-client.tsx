@@ -357,7 +357,7 @@ export default function AdminDashboardClient({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(`Exported master NMMS attendance matrix (${res.count} schools)!`);
+        toast.success(`Exported master teachers attendance matrix (${res.count} schools)!`);
         setIsExportingConsolidated(false);
         setIsExportSchoolsMatrixOpen(false);
       }
@@ -571,7 +571,7 @@ export default function AdminDashboardClient({
               <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-tight truncate">
                 CEO - Madurai
               </span>
-              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider block truncate">
+              <span className="text-xs font-bold text-black uppercase tracking-wider block truncate">
                 Gmeet Attendance Portal (Admin)
               </span>
             </div>
@@ -610,8 +610,8 @@ export default function AdminDashboardClient({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-2 overflow-x-auto py-2.5">
           {[
             { id: "overview", label: "Dashboard", icon: Layers },
-            { id: "sessions", label: "NMMS Sessions", icon: Video },
-            { id: "new-session", label: "New NMMS Session", icon: Plus },
+            { id: "sessions", label: "Teachers Sessions", icon: Video },
+            { id: "new-session", label: "New Teachers Session", icon: Plus },
             { id: "brte-sessions", label: "BRTE Sessions", icon: BookOpen },
             { id: "new-brte-session", label: "New BRTE Session", icon: Plus },
             { id: "schools", label: "Schools", icon: SchoolIcon },
@@ -658,7 +658,7 @@ export default function AdminDashboardClient({
               <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">NMMS Sessions</p>
+                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Teachers Sessions</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900">{sessions.length}</p>
                   </div>
                   <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,56%,24%)]/10 text-[hsl(213,56%,24%)] shrink-0">
@@ -708,7 +708,7 @@ export default function AdminDashboardClient({
                   Export Master BRTE Matrix
                 </Button>
                 <Button onClick={() => setActiveTab("new-session")} className="gap-2 text-xs h-9">
-                  <Plus className="w-4 h-4" /> Schedule NMMS Session
+                  <Plus className="w-4 h-4" /> Schedule Teachers Session
                 </Button>
                 <Button onClick={() => setActiveTab("new-brte-session")} variant="outline" className="gap-2 text-xs h-9">
                   <Plus className="w-4 h-4" /> Schedule BRTE Session
@@ -716,12 +716,12 @@ export default function AdminDashboardClient({
               </div>
             </div>
 
-            {/* NMMS Sessions summary table */}
+            {/* Teachers Sessions summary table */}
             <Card>
               <CardHeader className="py-4 border-b border-gray-100 bg-gray-50/50">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Video className="w-4 h-4 text-blue-600" />
-                  NMMS Sessions
+                  Teachers Sessions
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -930,13 +930,13 @@ export default function AdminDashboardClient({
           </div>
         )}
 
-        {/* ── TAB 2: NMMS SESSIONS LIST ── */}
+        {/* ── TAB 2: TEACHERS SESSIONS LIST ── */}
         {activeTab === "sessions" && (
           <div className="space-y-6 animate-fade-up">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">NMMS Training Sessions</h2>
-                <p className="text-sm text-gray-500">Manage NMMS sessions and export attendance.</p>
+                <h2 className="text-lg font-bold text-gray-900">Teachers Training Sessions</h2>
+                <p className="text-sm text-gray-500">Manage teachers sessions and export attendance.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                 <Button
@@ -952,7 +952,7 @@ export default function AdminDashboardClient({
                   Export Master Schools Matrix
                 </Button>
                 <Button onClick={() => setActiveTab("new-session")} className="w-full sm:w-auto gap-2 text-xs h-9">
-                  <Plus className="w-4 h-4" /> Schedule NMMS Session
+                  <Plus className="w-4 h-4" /> Schedule Teachers Session
                 </Button>
               </div>
             </div>
@@ -1060,12 +1060,12 @@ export default function AdminDashboardClient({
           </div>
         )}
 
-        {/* ── TAB 3: CREATE NEW NMMS SESSION ── */}
+        {/* ── TAB 3: CREATE NEW TEACHERS SESSION ── */}
         {activeTab === "new-session" && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
             <Card>
               <CardHeader className="border-b border-gray-100 bg-gray-50/50">
-                <CardTitle>Schedule NMMS Session</CardTitle>
+                <CardTitle>Schedule Teachers Session</CardTitle>
                 <CardDescription>
                   Create a new training schedule and specify target school categories.
                 </CardDescription>
@@ -1073,8 +1073,8 @@ export default function AdminDashboardClient({
               <CardContent className="pt-6">
                 <form onSubmit={handleCreateSession} className="space-y-5">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-gray-700">NMMS Session Title <span className="text-red-500">*</span></label>
-                    <Input placeholder="e.g. NMMS Orientation Session 1" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                    <label className="text-sm font-semibold text-gray-700">Teachers Session Title <span className="text-red-500">*</span></label>
+                    <Input placeholder="e.g. Teacher Orientation Session 1" value={title} onChange={(e) => setTitle(e.target.value)} required />
                   </div>
 
                   <div className="space-y-1.5">
@@ -1675,18 +1675,18 @@ export default function AdminDashboardClient({
         </div>
       )}
 
-      {/* EDIT NMMS SESSION MODAL */}
+      {/* EDIT TEACHERS SESSION MODAL */}
       {editingSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md shadow-2xl border-0">
             <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-lg">Edit NMMS Session</CardTitle>
+              <CardTitle className="text-lg">Edit Teachers Session</CardTitle>
               <button onClick={() => setEditingSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleUpdateSession} className="space-y-4 text-sm">
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-gray-700">NMMS Session Title</label>
+                  <label className="font-semibold text-gray-700">Teachers Session Title</label>
                   <Input value={editingSession.title ?? ""} onChange={(e) => setEditingSession({ ...editingSession, title: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
