@@ -2,6 +2,7 @@
 
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/index";
 import { getSession } from "@/lib/cookies";
 import { CategoryType, SchoolType, AttendanceStatus } from "@prisma/client";
@@ -273,19 +274,109 @@ export async function createSessionAction(
   }
 }
 
+export interface UpdateSessionInput {
+  title?: string;
+  description?: string;
+  sessionDate?: string;
+  startTime?: string;
+  endTime?: string;
+  generalMeetUrl?: string;
+  isAttendanceOpen?: boolean;
+  isPublished?: boolean;
+  categoryTypes?: CategoryType[];
+  schoolTypes?: string[];
+  blocks?: string[];
+}
+
 export async function updateSessionAction(
   sessionId: string,
-  data: { title?: string; generalMeetUrl?: string; isAttendanceOpen?: boolean; isPublished?: boolean }
-): Promise<{ success?: true; error?: string }> {
+  data: UpdateSessionInput
+): Promise<{ success?: true; updatedSession?: any; error?: string }> {
   const session = await getSession();
   if (!session || session.role !== "admin") return { error: "Unauthorized." };
 
   try {
-    await prisma.session.update({
-      where: { id: sessionId },
-      data,
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. Sync category rules if provided
+      if (data.categoryTypes !== undefined) {
+        await tx.sessionCategoryRule.deleteMany({ where: { sessionId } });
+        if (data.categoryTypes.length > 0) {
+          await tx.sessionCategoryRule.createMany({
+            data: data.categoryTypes.map((categoryType) => ({ sessionId, categoryType })),
+          });
+        }
+      }
+
+      // 2. Sync school type rules if provided
+      if (data.schoolTypes !== undefined) {
+        await tx.sessionSchoolTypeRule.deleteMany({ where: { sessionId } });
+        if (data.schoolTypes.length > 0) {
+          await tx.sessionSchoolTypeRule.createMany({
+            data: data.schoolTypes.map((schoolType) => ({ sessionId, schoolType })),
+          });
+        }
+      }
+
+      // 3. Sync block rules if provided
+      if (data.blocks !== undefined) {
+        await tx.sessionBlockRule.deleteMany({ where: { sessionId } });
+        if (data.blocks.length > 0) {
+          await tx.sessionBlockRule.createMany({
+            data: data.blocks.map((block) => ({ sessionId, block })),
+          });
+        }
+      }
+
+      // 4. Parse date and times
+      const sessionDate = data.sessionDate ? new Date(data.sessionDate) : undefined;
+      const startTime =
+        data.startTime !== undefined
+          ? data.startTime
+            ? new Date(`1970-01-01T${data.startTime}:00.000Z`)
+            : null
+          : undefined;
+      const endTime =
+        data.endTime !== undefined
+          ? data.endTime
+            ? new Date(`1970-01-01T${data.endTime}:00.000Z`)
+            : null
+          : undefined;
+
+      // 5. Update session record
+      return await tx.session.update({
+        where: { id: sessionId },
+        data: {
+          ...(data.title !== undefined && { title: data.title }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(sessionDate !== undefined && { sessionDate }),
+          ...(startTime !== undefined && { startTime }),
+          ...(endTime !== undefined && { endTime }),
+          ...(data.generalMeetUrl !== undefined && { generalMeetUrl: data.generalMeetUrl }),
+          ...(data.isAttendanceOpen !== undefined && { isAttendanceOpen: data.isAttendanceOpen }),
+          ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
+        },
+        include: {
+          categoryRules: true,
+          schoolTypeRules: true,
+          blockRules: true,
+          _count: { select: { attendance: true, meetLinks: true } },
+        },
+      });
     });
-    return { success: true };
+
+    revalidatePath("/teacher/dashboard");
+    revalidatePath("/admin/dashboard");
+
+    return {
+      success: true,
+      updatedSession: {
+        ...updated,
+        sessionDate: updated.sessionDate.toISOString(),
+        startTime: updated.startTime ? updated.startTime.toISOString() : null,
+        endTime: updated.endTime ? updated.endTime.toISOString() : null,
+        createdAt: updated.createdAt.toISOString(),
+      },
+    };
   } catch (err: any) {
     console.error("updateSessionAction error:", err);
     return { error: err.message ?? "Failed to update session." };
@@ -814,16 +905,82 @@ export async function createBrteSessionAction(
   }
 }
 
+export interface UpdateBrteSessionInput {
+  title?: string;
+  description?: string;
+  sessionDate?: string;
+  startTime?: string;
+  endTime?: string;
+  generalMeetUrl?: string;
+  isAttendanceOpen?: boolean;
+  isPublished?: boolean;
+  blocks?: string[];
+}
+
 export async function updateBrteSessionAction(
   sessionId: string,
-  data: { title?: string; generalMeetUrl?: string; isAttendanceOpen?: boolean; isPublished?: boolean }
-): Promise<{ success?: true; error?: string }> {
+  data: UpdateBrteSessionInput
+): Promise<{ success?: true; updatedSession?: any; error?: string }> {
   const session = await getSession();
   if (!session || session.role !== "admin") return { error: "Unauthorized." };
 
   try {
-    await prisma.brteSession.update({ where: { id: sessionId }, data });
-    return { success: true };
+    const updated = await prisma.$transaction(async (tx) => {
+      if (data.blocks !== undefined) {
+        await tx.brteSessionBlockRule.deleteMany({ where: { sessionId } });
+        if (data.blocks.length > 0) {
+          await tx.brteSessionBlockRule.createMany({
+            data: data.blocks.map((block) => ({ sessionId, block })),
+          });
+        }
+      }
+
+      const sessionDate = data.sessionDate ? new Date(data.sessionDate) : undefined;
+      const startTime =
+        data.startTime !== undefined
+          ? data.startTime
+            ? new Date(`1970-01-01T${data.startTime}:00.000Z`)
+            : null
+          : undefined;
+      const endTime =
+        data.endTime !== undefined
+          ? data.endTime
+            ? new Date(`1970-01-01T${data.endTime}:00.000Z`)
+            : null
+          : undefined;
+
+      return await tx.brteSession.update({
+        where: { id: sessionId },
+        data: {
+          ...(data.title !== undefined && { title: data.title }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(sessionDate !== undefined && { sessionDate }),
+          ...(startTime !== undefined && { startTime }),
+          ...(endTime !== undefined && { endTime }),
+          ...(data.generalMeetUrl !== undefined && { generalMeetUrl: data.generalMeetUrl }),
+          ...(data.isAttendanceOpen !== undefined && { isAttendanceOpen: data.isAttendanceOpen }),
+          ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
+        },
+        include: {
+          blockRules: true,
+          _count: { select: { attendance: true } },
+        },
+      });
+    });
+
+    revalidatePath("/brte/dashboard");
+    revalidatePath("/admin/dashboard");
+
+    return {
+      success: true,
+      updatedSession: {
+        ...updated,
+        sessionDate: updated.sessionDate.toISOString(),
+        startTime: updated.startTime ? updated.startTime.toISOString() : null,
+        endTime: updated.endTime ? updated.endTime.toISOString() : null,
+        createdAt: updated.createdAt.toISOString(),
+      },
+    };
   } catch (err: any) {
     console.error("updateBrteSessionAction error:", err);
     return { error: err.message ?? "Failed to update BRTE session." };

@@ -23,7 +23,7 @@ import {
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -105,6 +105,31 @@ function formatSessionTimeString(startTime?: string | null, endTime?: string | n
     return `${start} - ${end}`;
   } catch {
     return null;
+  }
+}
+
+function formatDateForInput(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return "";
+  }
+}
+
+function formatTimeForInput(timeStr?: string | null): string {
+  if (!timeStr) return "";
+  try {
+    if (/^\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+    const d = new Date(timeStr);
+    if (isNaN(d.getTime())) return "";
+    const hours = String(d.getUTCHours()).padStart(2, "0");
+    const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  } catch {
+    return "";
   }
 }
 
@@ -266,22 +291,59 @@ export default function AdminDashboardClient({
     });
   }
 
+  function openEditSession(s: any) {
+    setEditingSession({
+      id: s.id,
+      title: s.title ?? "",
+      description: s.description ?? "",
+      generalMeetUrl: s.generalMeetUrl ?? "",
+      sessionDate: formatDateForInput(s.sessionDate),
+      startTime: formatTimeForInput(s.startTime),
+      endTime: formatTimeForInput(s.endTime),
+      categoryTypes: s.categoryRules ? s.categoryRules.map((r: any) => r.categoryType) : [],
+      schoolTypes: s.schoolTypeRules ? s.schoolTypeRules.map((r: any) => r.schoolType) : [],
+      blocks: s.blockRules ? s.blockRules.map((r: any) => r.block) : [],
+    });
+  }
+
   function handleUpdateSession(e: React.FormEvent) {
     e.preventDefault();
     if (!editingSession) return;
 
+    if (!editingSession.title?.trim()) {
+      toast.error("Please enter a session title.");
+      return;
+    }
+    if (!editingSession.generalMeetUrl?.trim()) {
+      toast.error("Please enter a Google Meet URL.");
+      return;
+    }
+    if (!editingSession.sessionDate) {
+      toast.error("Please select a session date.");
+      return;
+    }
+
     startTransition(async () => {
       const res = await updateSessionAction(editingSession.id, {
-        title: editingSession.title,
-        generalMeetUrl: editingSession.generalMeetUrl,
-        isAttendanceOpen: editingSession.isAttendanceOpen,
-        isPublished: editingSession.isPublished,
+        title: editingSession.title.trim(),
+        description: editingSession.description?.trim() || undefined,
+        generalMeetUrl: editingSession.generalMeetUrl.trim(),
+        sessionDate: editingSession.sessionDate,
+        startTime: editingSession.startTime || undefined,
+        endTime: editingSession.endTime || undefined,
+        categoryTypes: editingSession.categoryTypes || [],
+        schoolTypes: editingSession.schoolTypes || [],
+        blocks: editingSession.blocks || [],
       });
       if (res.error) {
         toast.error(`Update failed: ${res.error}`);
       } else {
-        toast.success("Session updated successfully!");
-        setSessions(sessions.map((s) => (s.id === editingSession.id ? editingSession : s)));
+        toast.success("Session updated successfully! Target schools will now receive the link.");
+        if (res.updatedSession) {
+          setSessions((prev) =>
+            prev.map((s) => (s.id === editingSession.id ? res.updatedSession : s))
+          );
+        }
         setEditingSession(null);
         router.refresh();
       }
@@ -421,22 +483,55 @@ export default function AdminDashboardClient({
     });
   }
 
+  function openEditBrteSession(s: any) {
+    setEditingBrteSession({
+      id: s.id,
+      title: s.title ?? "",
+      description: s.description ?? "",
+      generalMeetUrl: s.generalMeetUrl ?? "",
+      sessionDate: formatDateForInput(s.sessionDate),
+      startTime: formatTimeForInput(s.startTime),
+      endTime: formatTimeForInput(s.endTime),
+      blocks: s.blockRules ? s.blockRules.map((r: any) => r.block) : [],
+    });
+  }
+
   function handleUpdateBrteSession(e: React.FormEvent) {
     e.preventDefault();
     if (!editingBrteSession) return;
 
+    if (!editingBrteSession.title?.trim()) {
+      toast.error("Please enter a session title.");
+      return;
+    }
+    if (!editingBrteSession.generalMeetUrl?.trim()) {
+      toast.error("Please enter a Google Meet URL.");
+      return;
+    }
+    if (!editingBrteSession.sessionDate) {
+      toast.error("Please select a session date.");
+      return;
+    }
+
     startTransition(async () => {
       const res = await updateBrteSessionAction(editingBrteSession.id, {
-        title: editingBrteSession.title,
-        generalMeetUrl: editingBrteSession.generalMeetUrl,
-        isAttendanceOpen: editingBrteSession.isAttendanceOpen,
-        isPublished: editingBrteSession.isPublished,
+        title: editingBrteSession.title.trim(),
+        description: editingBrteSession.description?.trim() || undefined,
+        generalMeetUrl: editingBrteSession.generalMeetUrl.trim(),
+        sessionDate: editingBrteSession.sessionDate,
+        startTime: editingBrteSession.startTime || undefined,
+        endTime: editingBrteSession.endTime || undefined,
+        blocks: editingBrteSession.blocks || [],
       });
       if (res.error) {
         toast.error(`Update failed: ${res.error}`);
       } else {
         toast.success("BRTE Session updated successfully!");
-        setBrteSessions(brteSessions.map((s) => (s.id === editingBrteSession.id ? editingBrteSession : s)));
+        if (res.updatedSession) {
+          setBrteSessions((prev) =>
+            prev.map((s) => (s.id === editingBrteSession.id ? res.updatedSession : s))
+          );
+        }
         setEditingBrteSession(null);
         router.refresh();
       }
@@ -807,7 +902,7 @@ export default function AdminDashboardClient({
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => setEditingSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500">
                                   <Edit2 className="w-4 h-4" />
                                 </Button>
                                 <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
@@ -910,7 +1005,7 @@ export default function AdminDashboardClient({
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
-                                  <Button size="icon" variant="ghost" onClick={() => setEditingBrteSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                  <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500">
                                     <Edit2 className="w-4 h-4" />
                                   </Button>
                                   <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
@@ -1041,7 +1136,7 @@ export default function AdminDashboardClient({
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => setEditingSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500">
                                   <Edit2 className="w-4 h-4" />
                                 </Button>
                                 <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
@@ -1334,7 +1429,7 @@ export default function AdminDashboardClient({
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
-                                  <Button size="icon" variant="ghost" onClick={() => setEditingBrteSession({ ...s })} className="h-8 w-8 text-gray-500">
+                                  <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500">
                                     <Edit2 className="w-4 h-4" />
                                   </Button>
                                   <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
@@ -1678,24 +1773,164 @@ export default function AdminDashboardClient({
       {/* EDIT TEACHERS SESSION MODAL */}
       {editingSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md shadow-2xl border-0">
-            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] shadow-2xl border-0 flex flex-col overflow-hidden">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4 shrink-0">
               <CardTitle className="text-lg">Edit Teachers Session</CardTitle>
               <button onClick={() => setEditingSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleUpdateSession} className="space-y-4 text-sm">
+            <CardContent className="overflow-y-auto flex-1 pt-5 pb-2">
+              <form id="edit-session-form" onSubmit={handleUpdateSession} className="space-y-4 text-sm">
+                {/* Title */}
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-gray-700">Teachers Session Title</label>
+                  <label className="font-semibold text-gray-700">Session Title <span className="text-red-500">*</span></label>
                   <Input value={editingSession.title ?? ""} onChange={(e) => setEditingSession({ ...editingSession, title: e.target.value })} />
                 </div>
+
+                {/* Date & Time */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5 sm:col-span-1">
+                    <label className="font-semibold text-gray-700">Date <span className="text-red-500">*</span></label>
+                    <Input type="date" value={editingSession.sessionDate ?? ""} onChange={(e) => setEditingSession({ ...editingSession, sessionDate: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">Start Time</label>
+                    <Input type="time" value={editingSession.startTime ?? ""} onChange={(e) => setEditingSession({ ...editingSession, startTime: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">End Time</label>
+                    <Input type="time" value={editingSession.endTime ?? ""} onChange={(e) => setEditingSession({ ...editingSession, endTime: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* Meet URL */}
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-gray-700">Google Meet URL</label>
+                  <label className="font-semibold text-gray-700">Google Meet URL <span className="text-red-500">*</span></label>
                   <Input value={editingSession.generalMeetUrl ?? ""} onChange={(e) => setEditingSession({ ...editingSession, generalMeetUrl: e.target.value })} />
                 </div>
-                <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
+
+                {/* Target Rules */}
+                <div className="space-y-4 pt-3 border-t border-gray-100">
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Target Rules — only matching schools receive the Meet link</p>
+
+                  {/* Category Types */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-gray-700">1. School Category Types</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {CATEGORY_TYPE_OPTIONS.map((cat) => {
+                        const isSelected = (editingSession.categoryTypes || []).includes(cat.id);
+                        return (
+                          <div
+                            key={cat.id}
+                            onClick={() => {
+                              const current: string[] = editingSession.categoryTypes || [];
+                              setEditingSession({
+                                ...editingSession,
+                                categoryTypes: isSelected
+                                  ? current.filter((c: string) => c !== cat.id)
+                                  : [...current, cat.id],
+                              });
+                            }}
+                            className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                              isSelected
+                                ? "bg-blue-50 border-blue-600 text-blue-900"
+                                : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white"}`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <div className="text-xs font-semibold">{cat.label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* School Types */}
+                  {availableSchoolTypes.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <label className="text-xs font-semibold text-gray-700">2. School Types</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                        {availableSchoolTypes.map((st) => {
+                          const isSelected = (editingSession.schoolTypes || []).includes(st);
+                          return (
+                            <div
+                              key={st}
+                              onClick={() => {
+                                const current: string[] = editingSession.schoolTypes || [];
+                                setEditingSession({
+                                  ...editingSession,
+                                  schoolTypes: isSelected
+                                    ? current.filter((s: string) => s !== st)
+                                    : [...current, st],
+                                });
+                              }}
+                              className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                                isSelected
+                                  ? "bg-purple-50 border-purple-600 text-purple-900"
+                                  : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-purple-600 bg-purple-600 text-white" : "border-gray-300 bg-white"}`}>
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                              <div className="text-xs font-semibold truncate">{st}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Blocks */}
+                  {availableBlocks.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <label className="text-xs font-semibold text-gray-700">3. Target Blocks</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-1">
+                        {availableBlocks.map((blk) => {
+                          const isSelected = (editingSession.blocks || []).includes(blk);
+                          return (
+                            <div
+                              key={blk}
+                              onClick={() => {
+                                const current: string[] = editingSession.blocks || [];
+                                setEditingSession({
+                                  ...editingSession,
+                                  blocks: isSelected
+                                    ? current.filter((b: string) => b !== blk)
+                                    : [...current, blk],
+                                });
+                              }}
+                              className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center gap-2 ${
+                                isSelected
+                                  ? "bg-emerald-50 border-emerald-600 text-emerald-900"
+                                  : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-emerald-600 bg-emerald-600 text-white" : "border-gray-300 bg-white"}`}>
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                              <div className="text-xs font-semibold truncate">{blk}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-500 pt-1">
+                    {(!editingSession.categoryTypes?.length && !editingSession.schoolTypes?.length && !editingSession.blocks?.length)
+                      ? "No filters selected — session visible to ALL active teachers."
+                      : `Targeting: ${editingSession.categoryTypes?.length ? `${editingSession.categoryTypes.length} Category Type(s)` : "All Categories"} AND ${editingSession.schoolTypes?.length ? `${editingSession.schoolTypes.length} School Type(s)` : "All School Types"} AND ${editingSession.blocks?.length ? `${editingSession.blocks.length} Block(s)` : "All Blocks"}.`}
+                  </p>
+                </div>
               </form>
             </CardContent>
+            <CardFooter className="border-t border-gray-100 pt-4 pb-4 shrink-0">
+              <Button type="submit" form="edit-session-form" className="w-full" disabled={isPending}>
+                {isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </CardFooter>
           </Card>
         </div>
       )}
@@ -1703,27 +1938,95 @@ export default function AdminDashboardClient({
       {/* EDIT BRTE SESSION MODAL */}
       {editingBrteSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md shadow-2xl border-0">
-            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] shadow-2xl border-0 flex flex-col overflow-hidden">
+            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4 shrink-0">
               <CardTitle className="text-lg">Edit BRTE Session</CardTitle>
               <button onClick={() => setEditingBrteSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleUpdateBrteSession} className="space-y-4 text-sm">
+            <CardContent className="overflow-y-auto flex-1 pt-5 pb-2">
+              <form id="edit-brte-session-form" onSubmit={handleUpdateBrteSession} className="space-y-4 text-sm">
+                {/* Title */}
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-gray-700">Session Title</label>
+                  <label className="font-semibold text-gray-700">Session Title <span className="text-red-500">*</span></label>
                   <Input value={editingBrteSession.title ?? ""} onChange={(e) => setEditingBrteSession({ ...editingBrteSession, title: e.target.value })} />
                 </div>
+
+                {/* Date & Time */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5 sm:col-span-1">
+                    <label className="font-semibold text-gray-700">Date <span className="text-red-500">*</span></label>
+                    <Input type="date" value={editingBrteSession.sessionDate ?? ""} onChange={(e) => setEditingBrteSession({ ...editingBrteSession, sessionDate: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">Start Time</label>
+                    <Input type="time" value={editingBrteSession.startTime ?? ""} onChange={(e) => setEditingBrteSession({ ...editingBrteSession, startTime: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-gray-700">End Time</label>
+                    <Input type="time" value={editingBrteSession.endTime ?? ""} onChange={(e) => setEditingBrteSession({ ...editingBrteSession, endTime: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* Meet URL */}
                 <div className="space-y-1.5">
-                  <label className="font-semibold text-gray-700">Google Meet URL</label>
+                  <label className="font-semibold text-gray-700">Google Meet URL <span className="text-red-500">*</span></label>
                   <Input value={editingBrteSession.generalMeetUrl ?? ""} onChange={(e) => setEditingBrteSession({ ...editingBrteSession, generalMeetUrl: e.target.value })} />
                 </div>
-                <Button type="submit" className="w-full mt-2" disabled={isPending}>Save Changes</Button>
+
+                {/* Target Blocks */}
+                {availableBrteBlocks.length > 0 && (
+                  <div className="space-y-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Target Rules — only matching BRTEs receive the Meet link</p>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-gray-700">Target BRTE Blocks</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {availableBrteBlocks.map((blk) => {
+                          const isSelected = (editingBrteSession.blocks || []).includes(blk);
+                          return (
+                            <div
+                              key={blk}
+                              onClick={() => {
+                                const current: string[] = editingBrteSession.blocks || [];
+                                setEditingBrteSession({
+                                  ...editingBrteSession,
+                                  blocks: isSelected
+                                    ? current.filter((b: string) => b !== blk)
+                                    : [...current, blk],
+                                });
+                              }}
+                              className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center gap-2 ${
+                                isSelected
+                                  ? "bg-purple-50 border-purple-600 text-purple-900"
+                                  : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-purple-600 bg-purple-600 text-white" : "border-gray-300 bg-white"}`}>
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                              <div className="text-xs font-semibold truncate">{blk}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {(!editingBrteSession.blocks?.length)
+                          ? "No blocks selected — session visible to ALL active BRTEs."
+                          : `Targeting ${editingBrteSession.blocks.length} Block(s).`}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </form>
             </CardContent>
+            <CardFooter className="border-t border-gray-100 pt-4 pb-4 shrink-0">
+              <Button type="submit" form="edit-brte-session-form" className="w-full" disabled={isPending}>
+                {isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </CardFooter>
           </Card>
         </div>
       )}
+
       {/* EXPORT MASTER SCHOOLS MATRIX FILTER MODAL */}
       {isExportSchoolsMatrixOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
