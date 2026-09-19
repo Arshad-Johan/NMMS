@@ -817,15 +817,45 @@ export default function AdminDashboardClient({
                 <CardTitle className="text-base flex items-center gap-2">
                   <Video className="w-4 h-4 text-blue-600" />
                   Teachers Sessions
-                </CardTitle>
+                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table className="min-w-[700px]">
+                {/* Mobile card list */}
+                <div className="divide-y divide-gray-100 md:hidden">
+                  {sessions.slice(0, 5).map((s) => {
+                    const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                    const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                    return (
+                      <div key={s.id} className="px-4 py-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              {formattedTime && <span className="ml-2">{formattedTime}</span>}
+                            </p>
+                          </div>
+                          {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button size="sm" className="h-7 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                            {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                            Export
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Date &amp; Time</TableHead>
                         <TableHead>Google Meet Link</TableHead>
                         <TableHead>Target Rules</TableHead>
                         <TableHead>Exports</TableHead>
@@ -845,27 +875,12 @@ export default function AdminDashboardClient({
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-gray-900">
-                                {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                              </div>
-                              {formattedTime && (
-                                <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
-                                  <Clock className="w-3 h-3" /> {formattedTime}
-                                </div>
-                              )}
+                              <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                              {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
                             </TableCell>
                             <TableCell>
-                              {expired ? (
-                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
-                              ) : (
-                                <a
-                                  href={s.generalMeetUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
-                                >
-                                  Open Meet <ExternalLink className="w-3 h-3" />
-                                </a>
+                              {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
                               )}
                             </TableCell>
                             <TableCell>
@@ -873,41 +888,22 @@ export default function AdminDashboardClient({
                                 <Badge variant="secondary">All Schools</Badge>
                               ) : (
                                 <div className="flex gap-1 flex-wrap max-w-[220px]">
-                                  {s.categoryRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>
-                                  ))}
-                                  {s.schoolTypeRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>
-                                  ))}
-                                  {s.blockRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>
-                                  ))}
+                                  {s.categoryRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>)}
+                                  {s.schoolTypeRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>)}
+                                  {s.blockRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>)}
                                 </div>
                               )}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                size="sm"
-                                className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                                onClick={() => handleExportSessionExcel(s.id, s.title)}
-                                disabled={exportingSessionId === s.id}
-                              >
-                                {exportingSessionId === s.id ? (
-                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <Download className="w-3 h-3 mr-1" />
-                                )}
+                              <Button size="sm" className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                                 Export
                               </Button>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500">
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -929,12 +925,42 @@ export default function AdminDashboardClient({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table className="min-w-[700px]">
+                  {/* Mobile card list */}
+                  <div className="divide-y divide-gray-100 md:hidden">
+                    {brteSessions.slice(0, 5).map((s) => {
+                      const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                      const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                      return (
+                        <div key={s.id} className="px-4 py-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                {formattedTime && <span className="ml-2">{formattedTime}</span>}
+                              </p>
+                            </div>
+                            {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Button size="sm" className="h-7 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
+                              {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                              Export
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Title</TableHead>
-                          <TableHead>Date & Time</TableHead>
+                          <TableHead>Date &amp; Time</TableHead>
                           <TableHead>Google Meet Link</TableHead>
                           <TableHead>Target Blocks</TableHead>
                           <TableHead>Exports</TableHead>
@@ -948,69 +974,32 @@ export default function AdminDashboardClient({
                           return (
                             <TableRow key={s.id}>
                               <TableCell className="font-semibold text-gray-900">
-                                <div className="flex items-center gap-2">
-                                  <span className="truncate max-w-[200px]">{s.title}</span>
-                                  {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
-                                </div>
+                                <div className="flex items-center gap-2"><span className="truncate max-w-[200px]">{s.title}</span>{expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}</div>
                               </TableCell>
                               <TableCell>
-                                <div className="font-medium text-gray-900">
-                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                                </div>
-                                {formattedTime && (
-                                  <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
-                                    <Clock className="w-3 h-3" /> {formattedTime}
-                                  </div>
+                                <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                                {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
+                              </TableCell>
+                              <TableCell>
+                                {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                  <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
                                 )}
                               </TableCell>
                               <TableCell>
-                                {expired ? (
-                                  <span className="text-xs text-gray-500 font-medium">Link closed</span>
-                                ) : (
-                                  <a
-                                    href={s.generalMeetUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
-                                  >
-                                    Open Meet <ExternalLink className="w-3 h-3" />
-                                  </a>
+                                {(!s.blockRules || s.blockRules.length === 0) ? <Badge variant="secondary">All BRTEs</Badge> : (
+                                  <div className="flex gap-1 flex-wrap max-w-[220px]">{s.blockRules.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>)}</div>
                                 )}
                               </TableCell>
                               <TableCell>
-                                {(!s.blockRules || s.blockRules.length === 0) ? (
-                                  <Badge variant="secondary">All BRTEs</Badge>
-                                ) : (
-                                  <div className="flex gap-1 flex-wrap max-w-[220px]">
-                                    {s.blockRules.map((r: any) => (
-                                      <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>
-                                    ))}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  size="sm"
-                                  className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
-                                  onClick={() => handleExportBrteSessionExcel(s.id, s.title)}
-                                  disabled={exportingBrteSessionId === s.id}
-                                >
-                                  {exportingBrteSessionId === s.id ? (
-                                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                                  ) : (
-                                    <Download className="w-3 h-3 mr-1" />
-                                  )}
+                                <Button size="sm" className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
+                                  {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                                   Export
                                 </Button>
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
-                                  <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500">
-                                    <Edit2 className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                                  <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -1054,12 +1043,49 @@ export default function AdminDashboardClient({
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table className="min-w-[700px]">
+                {/* Mobile card list */}
+                <div className="divide-y divide-gray-100 md:hidden">
+                  {sessions.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-500">No sessions yet.</p>
+                  ) : sessions.map((s) => {
+                    const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                    const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                    return (
+                      <div key={s.id} className="px-4 py-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              {formattedTime && <span className="ml-1.5">{formattedTime}</span>}
+                            </p>
+                          </div>
+                          {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button size="sm" className="h-7 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                            {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                            Export Excel
+                          </Button>
+                          {!expired && (
+                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 font-semibold">
+                              Meet <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                          <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Date &amp; Time</TableHead>
                         <TableHead>Target Rules</TableHead>
                         <TableHead>Google Meet Link</TableHead>
                         <TableHead>Exports</TableHead>
@@ -1073,75 +1099,38 @@ export default function AdminDashboardClient({
                         return (
                           <TableRow key={s.id}>
                             <TableCell className="font-semibold text-gray-900">
-                              <div className="flex items-center gap-2">
-                                <span className="truncate max-w-[200px]">{s.title}</span>
-                                {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
-                              </div>
+                              <div className="flex items-center gap-2"><span className="truncate max-w-[200px]">{s.title}</span>{expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}</div>
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-gray-900">
-                                {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                              </div>
-                              {formattedTime && (
-                                <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
-                                  <Clock className="w-3 h-3" /> {formattedTime}
-                                </div>
-                              )}
+                              <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                              {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
                             </TableCell>
                             <TableCell>
                               {(!s.categoryRules?.length && !s.schoolTypeRules?.length && !s.blockRules?.length) ? (
                                 <Badge variant="secondary">All Schools</Badge>
                               ) : (
                                 <div className="flex gap-1 flex-wrap max-w-[220px]">
-                                  {s.categoryRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>
-                                  ))}
-                                  {s.schoolTypeRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>
-                                  ))}
-                                  {s.blockRules?.map((r: any) => (
-                                    <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>
-                                  ))}
+                                  {s.categoryRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>)}
+                                  {s.schoolTypeRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>)}
+                                  {s.blockRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>)}
                                 </div>
                               )}
                             </TableCell>
                             <TableCell>
-                              {expired ? (
-                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
-                              ) : (
-                                <a
-                                  href={s.generalMeetUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
-                                >
-                                  Open Meet <ExternalLink className="w-3 h-3" />
-                                </a>
+                              {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
                               )}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                size="sm"
-                                className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                                onClick={() => handleExportSessionExcel(s.id, s.title)}
-                                disabled={exportingSessionId === s.id}
-                              >
-                                {exportingSessionId === s.id ? (
-                                  <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                  <Download className="w-3 h-3 mr-1" />
-                                )}
+                              <Button size="sm" className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                                 Export Excel
                               </Button>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500">
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1346,12 +1335,49 @@ export default function AdminDashboardClient({
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table className="min-w-[700px]">
+                {/* Mobile card list */}
+                <div className="divide-y divide-gray-100 md:hidden">
+                  {brteSessions.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-500">No BRTE sessions yet. Click &quot;Schedule BRTE Session&quot; to create one.</p>
+                  ) : brteSessions.map((s) => {
+                    const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                    const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                    return (
+                      <div key={s.id} className="px-4 py-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                              {formattedTime && <span className="ml-1.5">{formattedTime}</span>}
+                            </p>
+                          </div>
+                          {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button size="sm" className="h-7 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
+                            {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                            Export Excel
+                          </Button>
+                          {!expired && (
+                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 font-semibold">
+                              Meet <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                          <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Date &amp; Time</TableHead>
                         <TableHead>Google Meet Link</TableHead>
                         <TableHead>Target Blocks</TableHead>
                         <TableHead>Exports</TableHead>
@@ -1360,87 +1386,44 @@ export default function AdminDashboardClient({
                     </TableHeader>
                     <TableBody>
                       {brteSessions.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                            No BRTE sessions scheduled yet. Click &quot;Schedule BRTE Session&quot; to create one.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        brteSessions.map((s) => {
-                          const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
-                          const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
-                          return (
-                            <TableRow key={s.id}>
-                              <TableCell className="font-semibold text-gray-900">
-                                <div className="flex items-center gap-2">
-                                  <span className="truncate max-w-[200px]">{s.title}</span>
-                                  {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="font-medium text-gray-900">
-                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                                </div>
-                                {formattedTime && (
-                                  <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1">
-                                    <Clock className="w-3 h-3" /> {formattedTime}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {expired ? (
-                                  <span className="text-xs text-gray-500 font-medium">Link closed</span>
-                                ) : (
-                                  <a
-                                    href={s.generalMeetUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
-                                  >
-                                    Open Meet <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {(!s.blockRules || s.blockRules.length === 0) ? (
-                                  <Badge variant="secondary">All BRTEs</Badge>
-                                ) : (
-                                  <div className="flex gap-1 flex-wrap max-w-[220px]">
-                                    {s.blockRules.map((r: any) => (
-                                      <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>
-                                    ))}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  size="sm"
-                                  className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
-                                  onClick={() => handleExportBrteSessionExcel(s.id, s.title)}
-                                  disabled={exportingBrteSessionId === s.id}
-                                >
-                                  {exportingBrteSessionId === s.id ? (
-                                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                                  ) : (
-                                    <Download className="w-3 h-3 mr-1" />
-                                  )}
-                                  Export Excel
-                                </Button>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500">
-                                    <Edit2 className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
+                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">No BRTE sessions scheduled yet.</TableCell></TableRow>
+                      ) : brteSessions.map((s) => {
+                        const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                        const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                        return (
+                          <TableRow key={s.id}>
+                            <TableCell className="font-semibold text-gray-900">
+                              <div className="flex items-center gap-2"><span className="truncate max-w-[200px]">{s.title}</span>{expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                              {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
+                            </TableCell>
+                            <TableCell>
+                              {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {(!s.blockRules || s.blockRules.length === 0) ? <Badge variant="secondary">All BRTEs</Badge> : (
+                                <div className="flex gap-1 flex-wrap max-w-[220px]">{s.blockRules.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>)}</div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button size="sm" className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
+                                {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                Export Excel
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -1574,8 +1557,37 @@ export default function AdminDashboardClient({
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table className="min-w-[700px]">
+                {/* Mobile card list */}
+                <div className="divide-y divide-gray-100 md:hidden">
+                  {paginatedSchools.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-500">No schools match your search.</p>
+                  ) : paginatedSchools.map((sc) => (
+                    <div key={sc.udise} className="px-4 py-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm truncate">{sc.name}</p>
+                          <p className="text-xs font-mono text-[hsl(213,56%,24%)] mt-0.5">{sc.udise}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{sc.block ?? "—"} · {sc.management ?? "—"}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button size="icon" variant="ghost" onClick={() => setEditingSchool({ ...sc })} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => handleDeleteSchool(sc.udise)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                      <select
+                        value={sc.categoryType ?? ""}
+                        onChange={(e) => handleQuickCategoryChange(sc.udise, e.target.value ? (e.target.value as CategoryType) : null)}
+                        className="w-full h-8 rounded-md bg-white border border-gray-300 text-xs px-2 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[hsl(213,56%,24%)]"
+                      >
+                        <option value="">Unspecified</option>
+                        {CATEGORY_TYPE_OPTIONS.map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>UDISE Code</TableHead>
@@ -1588,48 +1600,31 @@ export default function AdminDashboardClient({
                     </TableHeader>
                     <TableBody>
                       {paginatedSchools.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                            No schools match your search.
+                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">No schools match your search.</TableCell></TableRow>
+                      ) : paginatedSchools.map((sc) => (
+                        <TableRow key={sc.udise}>
+                          <TableCell className="font-mono font-bold text-[hsl(213,56%,24%)]">{sc.udise}</TableCell>
+                          <TableCell className="font-semibold text-gray-900 max-w-xs truncate">{sc.name}</TableCell>
+                          <TableCell className="text-xs text-purple-800 font-medium max-w-[180px] truncate">{sc.management ?? "—"}</TableCell>
+                          <TableCell className="text-gray-600 text-xs">{sc.block ?? "—"} / {sc.educationDistrict ?? "—"}</TableCell>
+                          <TableCell>
+                            <select
+                              value={sc.categoryType ?? ""}
+                              onChange={(e) => handleQuickCategoryChange(sc.udise, e.target.value ? (e.target.value as CategoryType) : null)}
+                              className="h-8 rounded-md bg-white border border-gray-300 text-xs px-2 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[hsl(213,56%,24%)]"
+                            >
+                              <option value="">Unspecified</option>
+                              {CATEGORY_TYPE_OPTIONS.map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+                            </select>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button size="icon" variant="ghost" onClick={() => setEditingSchool({ ...sc })} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteSchool(sc.udise)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ) : (
-                        paginatedSchools.map((sc) => (
-                          <TableRow key={sc.udise}>
-                            <TableCell className="font-mono font-bold text-[hsl(213,56%,24%)]">{sc.udise}</TableCell>
-                            <TableCell className="font-semibold text-gray-900 max-w-xs truncate">{sc.name}</TableCell>
-                            <TableCell className="text-xs text-purple-800 font-medium max-w-[180px] truncate">{sc.management ?? "—"}</TableCell>
-                            <TableCell className="text-gray-600 text-xs">{sc.block ?? "—"} / {sc.educationDistrict ?? "—"}</TableCell>
-                            <TableCell>
-                              <select
-                                value={sc.categoryType ?? ""}
-                                onChange={(e) =>
-                                  handleQuickCategoryChange(
-                                    sc.udise,
-                                    e.target.value ? (e.target.value as CategoryType) : null
-                                  )
-                                }
-                                className="h-8 rounded-md bg-white border border-gray-300 text-xs px-2 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[hsl(213,56%,24%)]"
-                              >
-                                <option value="">Unspecified</option>
-                                {CATEGORY_TYPE_OPTIONS.map((opt) => (
-                                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                                ))}
-                              </select>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button size="icon" variant="ghost" onClick={() => setEditingSchool({ ...sc })} className="h-8 w-8 text-gray-500">
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" onClick={() => handleDeleteSchool(sc.udise)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
@@ -1639,23 +1634,11 @@ export default function AdminDashboardClient({
                     Showing <span className="font-bold text-gray-900">{filteredSchools.length === 0 ? 0 : (currentSchoolPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-gray-900">{Math.min(currentSchoolPage * ITEMS_PER_PAGE, filteredSchools.length)}</span> of <span className="font-bold text-gray-900">{filteredSchools.length}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={currentSchoolPage <= 1}
-                      onClick={() => setSchoolPage((p) => p - 1)}
-                    >
+                    <Button size="sm" variant="outline" disabled={currentSchoolPage <= 1} onClick={() => setSchoolPage((p) => p - 1)}>
                       <ChevronLeft className="w-4 h-4 mr-1" /> Prev
                     </Button>
-                    <span className="text-sm font-medium text-gray-600 px-2">
-                      Page {currentSchoolPage} of {totalSchoolPages}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={currentSchoolPage >= totalSchoolPages}
-                      onClick={() => setSchoolPage((p) => p + 1)}
-                    >
+                    <span className="text-sm font-medium text-gray-600 px-2">Page {currentSchoolPage} of {totalSchoolPages}</span>
+                    <Button size="sm" variant="outline" disabled={currentSchoolPage >= totalSchoolPages} onClick={() => setSchoolPage((p) => p + 1)}>
                       Next <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </div>

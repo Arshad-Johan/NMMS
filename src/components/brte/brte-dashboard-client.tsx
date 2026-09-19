@@ -353,61 +353,134 @@ export default function BrteDashboardClient({
                 <p className="text-sm text-gray-500 mt-1">Check back later for upcoming BRTE training sessions.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table className="min-w-[600px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Session Details</TableHead>
-                      <TableHead>Schedule</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Join Meeting</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignedSessions.map((sessionItem) => {
-                      const isPresent = sessionItem.userAttendance?.status === "present";
-                      const formattedTime = formatSessionTimeString(sessionItem.startTime, sessionItem.endTime);
-                      const expired = isSessionExpired(sessionItem.sessionDate, sessionItem.endTime, sessionItem.startTime);
+              <>
+                {/* ── Mobile: card list, Join button always visible ── */}
+                <div className="divide-y divide-gray-100 md:hidden">
+                  {assignedSessions.map((sessionItem) => {
+                    const isPresent = sessionItem.userAttendance?.status === "present";
+                    const formattedTime = formatSessionTimeString(sessionItem.startTime, sessionItem.endTime);
+                    const expired = isSessionExpired(sessionItem.sessionDate, sessionItem.endTime, sessionItem.startTime);
 
-                      return (
-                        <TableRow key={sessionItem.id} className={isPresent ? "bg-emerald-50/30" : ""}>
-                          <TableCell className="max-w-[250px]">
-                            <div className="font-bold text-gray-900">{sessionItem.title}</div>
+                    return (
+                      <div
+                        key={sessionItem.id}
+                        className={`px-4 py-4 space-y-3 ${isPresent ? "bg-emerald-50/40" : ""}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm leading-snug">{sessionItem.title}</p>
                             {sessionItem.description && (
-                              <div className="text-sm text-gray-500 mt-0.5 line-clamp-1">{sessionItem.description}</div>
+                              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{sessionItem.description}</p>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-semibold text-gray-900">
-                              {new Date(sessionItem.sessionDate).toLocaleDateString("en-IN", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </div>
-                            {formattedTime && (
-                              <div className="text-xs font-medium text-gray-500 flex items-center gap-1 mt-1">
-                                <Clock className="w-3.5 h-3.5" /> {formattedTime}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
+                          </div>
+                          <div className="shrink-0">
                             {isPresent ? (
-                              <Badge variant="success" className="gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> Present
+                              <Badge variant="success" className="gap-1 text-xs">
+                                <CheckCircle2 className="w-3 h-3" /> Present
                               </Badge>
                             ) : expired ? (
-                              <Badge variant="destructive" className="gap-1.5">
-                                <XCircle className="w-3.5 h-3.5" /> Absent
+                              <Badge variant="destructive" className="gap-1 text-xs">
+                                <XCircle className="w-3 h-3" /> Absent
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="gap-1.5 bg-amber-100 text-amber-800 hover:bg-amber-100">
-                                <Clock className="w-3.5 h-3.5" /> Pending
+                              <Badge className="gap-1 text-xs bg-amber-100 text-amber-800 hover:bg-amber-100 border-transparent">
+                                <Clock className="w-3 h-3" /> Pending
                               </Badge>
                             )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end">
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {new Date(sessionItem.sessionDate).toLocaleDateString("en-IN", {
+                              day: "2-digit", month: "short", year: "numeric",
+                            })}
+                          </span>
+                          {formattedTime && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {formattedTime}
+                            </span>
+                          )}
+                        </div>
+
+                        {expired ? (
+                          <p className="text-xs text-gray-400 font-medium flex items-center gap-1.5">
+                            <XCircle className="w-3.5 h-3.5" /> Session closed
+                          </p>
+                        ) : isPresent ? (
+                          <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Attendance recorded
+                          </p>
+                        ) : (
+                          <Button
+                            onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired)}
+                            className="w-full h-10 gap-2 font-bold text-sm"
+                            disabled={isPending}
+                          >
+                            <Video className="w-4 h-4" />
+                            Join & Mark Present
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── Desktop: table layout ── */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Session Details</TableHead>
+                        <TableHead>Schedule</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Join Meeting</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {assignedSessions.map((sessionItem) => {
+                        const isPresent = sessionItem.userAttendance?.status === "present";
+                        const formattedTime = formatSessionTimeString(sessionItem.startTime, sessionItem.endTime);
+                        const expired = isSessionExpired(sessionItem.sessionDate, sessionItem.endTime, sessionItem.startTime);
+
+                        return (
+                          <TableRow key={sessionItem.id} className={isPresent ? "bg-emerald-50/30" : ""}>
+                            <TableCell className="max-w-[280px]">
+                              <div className="font-bold text-gray-900">{sessionItem.title}</div>
+                              {sessionItem.description && (
+                                <div className="text-sm text-gray-500 mt-0.5 line-clamp-1">{sessionItem.description}</div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-semibold text-gray-900 text-sm">
+                                {new Date(sessionItem.sessionDate).toLocaleDateString("en-IN", {
+                                  day: "2-digit", month: "short", year: "numeric",
+                                })}
+                              </div>
+                              {formattedTime && (
+                                <div className="text-xs font-medium text-gray-500 flex items-center gap-1 mt-1">
+                                  <Clock className="w-3.5 h-3.5" /> {formattedTime}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {isPresent ? (
+                                <Badge variant="success" className="gap-1.5">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Present
+                                </Badge>
+                              ) : expired ? (
+                                <Badge variant="destructive" className="gap-1.5">
+                                  <XCircle className="w-3.5 h-3.5" /> Absent
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="gap-1.5 bg-amber-100 text-amber-800 hover:bg-amber-100">
+                                  <Clock className="w-3.5 h-3.5" /> Pending
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
                               {expired ? (
                                 <Badge variant="outline" className="text-gray-500 px-3 py-1.5">
                                   Closed
@@ -415,21 +488,21 @@ export default function BrteDashboardClient({
                               ) : (
                                 <Button
                                   onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired)}
-                                  className="h-10 gap-2 font-bold shadow-sm"
+                                  className="h-9 gap-2 font-bold shadow-sm text-sm"
                                   disabled={isPending}
                                 >
                                   <Video className="w-4 h-4" />
                                   Join & Mark Present
                                 </Button>
                               )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -447,49 +520,77 @@ export default function BrteDashboardClient({
                 No attendance records found.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table className="min-w-[500px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Session Title</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Marked Time</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {combinedHistory.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-semibold text-gray-900">{a.title}</TableCell>
-                        <TableCell className="font-medium text-gray-600">
+              <>
+                {/* Mobile history list */}
+                <div className="divide-y divide-gray-100 md:hidden">
+                  {combinedHistory.map((a) => (
+                    <div key={a.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{a.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
                           {new Date(a.sessionDate).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
+                            day: "2-digit", month: "short", year: "numeric",
                           })}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm text-gray-500">
-                          {a.markedAt
-                            ? new Date(a.markedAt).toLocaleTimeString("en-IN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                                timeZone: "Asia/Kolkata",
-                              })
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {a.status === "present" ? (
-                            <Badge variant="success">Present</Badge>
-                          ) : (
-                            <Badge variant="destructive">Absent</Badge>
+                          {a.markedAt && (
+                            <span className="ml-2 font-mono">
+                              · {new Date(a.markedAt).toLocaleTimeString("en-IN", {
+                                hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata",
+                              })}
+                            </span>
                           )}
-                        </TableCell>
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        {a.status === "present" ? (
+                          <Badge variant="success">Present</Badge>
+                        ) : (
+                          <Badge variant="destructive">Absent</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Session Title</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Marked Time</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {combinedHistory.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell className="font-semibold text-gray-900">{a.title}</TableCell>
+                          <TableCell className="font-medium text-gray-600">
+                            {new Date(a.sessionDate).toLocaleDateString("en-IN", {
+                              day: "2-digit", month: "short", year: "numeric",
+                            })}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm text-gray-500">
+                            {a.markedAt
+                              ? new Date(a.markedAt).toLocaleTimeString("en-IN", {
+                                  hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata",
+                                })
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {a.status === "present" ? (
+                              <Badge variant="success">Present</Badge>
+                            ) : (
+                              <Badge variant="destructive">Absent</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
