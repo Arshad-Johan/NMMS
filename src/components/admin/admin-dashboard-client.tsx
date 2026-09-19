@@ -842,6 +842,13 @@ export default function AdminDashboardClient({
                             {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                             Export
                           </Button>
+                          {expired ? (
+                            <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                          ) : (
+                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                              Open Meet <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
                           <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
                           <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
@@ -947,6 +954,13 @@ export default function AdminDashboardClient({
                               {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                               Export
                             </Button>
+                            {expired ? (
+                              <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                            ) : (
+                              <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                                Open Meet <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
                             <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
                             <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
                           </div>
@@ -1067,9 +1081,11 @@ export default function AdminDashboardClient({
                             {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                             Export Excel
                           </Button>
-                          {!expired && (
-                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 font-semibold">
-                              Meet <ExternalLink className="w-3 h-3" />
+                          {expired ? (
+                            <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                          ) : (
+                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                              Open Meet <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
                           <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
@@ -1359,9 +1375,11 @@ export default function AdminDashboardClient({
                             {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                             Export Excel
                           </Button>
-                          {!expired && (
-                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 inline-flex items-center gap-1 font-semibold">
-                              Meet <ExternalLink className="w-3 h-3" />
+                          {expired ? (
+                            <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                          ) : (
+                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                              Open Meet <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
                           <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
