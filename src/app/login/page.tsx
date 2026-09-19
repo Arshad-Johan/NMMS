@@ -182,7 +182,7 @@ export default function LoginPage() {
                   }`}
                 >
                   <School className="w-3.5 h-3.5" />
-                  Teacher Login
+                  HM / Teacher's Login
                 </button>
                 <button
                   type="button"
@@ -200,7 +200,7 @@ export default function LoginPage() {
 
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl font-bold tracking-tight text-gray-900">
-                  {loginMode === "teacher" ? "Teacher Login" : loginMode === "brte" ? "BRTE Sign In" : "Admin Sign In"}
+                  {loginMode === "teacher" ? "HM / Teacher's Login" : loginMode === "brte" ? "BRTE Sign In" : "Admin Sign In"}
                 </CardTitle>
                 <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">
                   {loginMode === "admin" ? "Authorized" : "Device Locked"}
