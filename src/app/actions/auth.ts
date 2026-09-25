@@ -74,7 +74,7 @@ export async function loginWithUdiseAction(
 }
 
 // ---------------------------------------------------------------------------
-// Admin Password Login Action (Single Password: prince@1977)
+// Admin Password Login Action (Single Password: ceomadurai@1977)
 // ---------------------------------------------------------------------------
 export async function adminPasswordLoginAction(
   pass: string
@@ -94,13 +94,13 @@ export async function adminPasswordLoginAction(
       data: {
         name: "Administrator",
         email: "admin@nmms.local",
-        passwordHash: hashPassword("prince@1977"),
+        passwordHash: hashPassword("ceomadurai@1977"),
         role: "admin",
       },
     });
   }
 
-  const isMasterMatch = trimmedPass === "prince@1977";
+  const isMasterMatch = trimmedPass === "ceomadurai@1977";
   const isHashMatch = verifyPassword(trimmedPass, user.passwordHash);
 
   if (!isMasterMatch && !isHashMatch) {
@@ -111,7 +111,7 @@ export async function adminPasswordLoginAction(
   if (isMasterMatch && !isHashMatch) {
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: hashPassword("prince@1977") },
+      data: { passwordHash: hashPassword("ceomadurai@1977") },
     });
   }
 

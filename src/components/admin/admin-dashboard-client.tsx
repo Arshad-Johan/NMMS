@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { logoutAction } from "@/app/actions/auth";
@@ -54,10 +54,21 @@ import {
   Clock,
   Landmark,
   BookOpen,
+  GraduationCap,
+  CheckCircle2,
+  CheckSquare,
 } from "lucide-react";
 import { CategoryType } from "@prisma/client";
 
-type Tab = "overview" | "sessions" | "new-session" | "brte-sessions" | "new-brte-session" | "schools";
+type Tab =
+  | "overview"
+  | "hm-sessions"
+  | "new-hm-session"
+  | "nmms-sessions"
+  | "new-nmms-session"
+  | "brte-sessions"
+  | "new-brte-session"
+  | "schools";
 
 interface AdminDashboardProps {
   adminName: string;
@@ -67,6 +78,8 @@ interface AdminDashboardProps {
   stats: {
     totalSchools: number;
     totalSessions: number;
+    totalHmSessions?: number;
+    totalNmmsSessions?: number;
     totalBrteSessions?: number;
     overallRate: number;
   };
@@ -212,16 +225,35 @@ export default function AdminDashboardClient({
   const [editingSession, setEditingSession] = useState<any | null>(null);
   const [editingBrteSession, setEditingBrteSession] = useState<any | null>(null);
 
-  // New Teacher Session Form State
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [sessionDate, setSessionDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [generalMeetUrl, setGeneralMeetUrl] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
-  const [selectedSchoolTypes, setSelectedSchoolTypes] = useState<string[]>([]);
-  const [selectedBlocks, setSelectedBlocks] = useState<string[]>([]);
+  // Separate form state for HM Session
+  const [hmTitle, setHmTitle] = useState("");
+  const [hmDescription, setHmDescription] = useState("");
+  const [hmSessionDate, setHmSessionDate] = useState("");
+  const [hmStartTime, setHmStartTime] = useState("");
+  const [hmEndTime, setHmEndTime] = useState("");
+  const [hmGeneralMeetUrl, setHmGeneralMeetUrl] = useState("");
+  const [hmSelectedCategories, setHmSelectedCategories] = useState<CategoryType[]>([]);
+  const [hmSelectedSchoolTypes, setHmSelectedSchoolTypes] = useState<string[]>([]);
+  const [hmSelectedBlocks, setHmSelectedBlocks] = useState<string[]>([]);
+
+  // Separate form state for NMMS Session
+  const [nmmsTitle, setNmmsTitle] = useState("");
+  const [nmmsDescription, setNmmsDescription] = useState("");
+  const [nmmsSessionDate, setNmmsSessionDate] = useState("");
+  const [nmmsStartTime, setNmmsStartTime] = useState("");
+  const [nmmsEndTime, setNmmsEndTime] = useState("");
+  const [nmmsGeneralMeetUrl, setNmmsGeneralMeetUrl] = useState("");
+  const [nmmsSelectedCategories, setNmmsSelectedCategories] = useState<CategoryType[]>([]);
+  const [nmmsSelectedSchoolTypes, setNmmsSelectedSchoolTypes] = useState<string[]>([]);
+  const [nmmsSelectedBlocks, setNmmsSelectedBlocks] = useState<string[]>([]);
+  const [nmmsIncludeBrte, setNmmsIncludeBrte] = useState(false);
+
+  // Session type for Master Matrix export modal
+  const [exportMatrixSessionType, setExportMatrixSessionType] = useState<"HM" | "NMMS">("HM");
+
+  // Filtered sessions by type
+  const hmSessions = useMemo(() => sessions.filter((s) => s.sessionType === "HM"), [sessions]);
+  const nmmsSessions = useMemo(() => sessions.filter((s) => s.sessionType !== "HM"), [sessions]);
 
   // New BRTE Session Form State
   const [brteTitle, setBrteTitle] = useState("");
@@ -242,7 +274,7 @@ export default function AdminDashboardClient({
       (s.educationDistrict && s.educationDistrict.toLowerCase().includes(schoolSearch.toLowerCase()))
   );
 
-  // Pagination Calculations
+  // Pagination Calculations for Schools
   const totalSchoolPages = Math.max(1, Math.ceil(filteredSchools.length / ITEMS_PER_PAGE));
   const currentSchoolPage = Math.min(schoolPage, totalSchoolPages);
   const paginatedSchools = filteredSchools.slice(
@@ -250,42 +282,248 @@ export default function AdminDashboardClient({
     currentSchoolPage * ITEMS_PER_PAGE
   );
 
+  // Session Pagination States
+  const [hmPage, setHmPage] = useState(1);
+  const [nmmsPage, setNmmsPage] = useState(1);
+  const [brtePage, setBrtePage] = useState(1);
+
+  // Row Selection States (Dedicated WhatsApp-web style selection)
+  const [selectedHmSessionIds, setSelectedHmSessionIds] = useState<string[]>([]);
+  const [selectedNmmsSessionIds, setSelectedNmmsSessionIds] = useState<string[]>([]);
+  const [selectedBrteSessionIds, setSelectedBrteSessionIds] = useState<string[]>([]);
+
+  const [isExportingSelectedHm, setIsExportingSelectedHm] = useState(false);
+  const [isExportingSelectedNmms, setIsExportingSelectedNmms] = useState(false);
+  const [isExportingSelectedBrte, setIsExportingSelectedBrte] = useState(false);
+
+  // Session Pagination Calculations
+  const totalHmPages = Math.max(1, Math.ceil(hmSessions.length / ITEMS_PER_PAGE));
+  const currentHmPage = Math.min(hmPage, totalHmPages);
+  const paginatedHmSessions = hmSessions.slice(
+    (currentHmPage - 1) * ITEMS_PER_PAGE,
+    currentHmPage * ITEMS_PER_PAGE
+  );
+
+  const totalNmmsPages = Math.max(1, Math.ceil(nmmsSessions.length / ITEMS_PER_PAGE));
+  const currentNmmsPage = Math.min(nmmsPage, totalNmmsPages);
+  const paginatedNmmsSessions = nmmsSessions.slice(
+    (currentNmmsPage - 1) * ITEMS_PER_PAGE,
+    currentNmmsPage * ITEMS_PER_PAGE
+  );
+
+  const totalBrtePages = Math.max(1, Math.ceil(brteSessions.length / ITEMS_PER_PAGE));
+  const currentBrtePage = Math.min(brtePage, totalBrtePages);
+  const paginatedBrteSessions = brteSessions.slice(
+    (currentBrtePage - 1) * ITEMS_PER_PAGE,
+    currentBrtePage * ITEMS_PER_PAGE
+  );
+
+  // Selection Handlers
+  function toggleSelectHmSession(id: string) {
+    setSelectedHmSessionIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
+
+  function toggleSelectAllHmSessions(currentPaginated: any[]) {
+    const pageIds = currentPaginated.map((s) => s.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedHmSessionIds.includes(id));
+    if (allSelected) {
+      setSelectedHmSessionIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedHmSessionIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  }
+
+  function handleDownloadSelectedHm() {
+    if (selectedHmSessionIds.length === 0) {
+      toast.error("Please select at least one HM session to download.");
+      return;
+    }
+    setIsExportingSelectedHm(true);
+    startTransition(async () => {
+      const res = await exportConsolidatedAttendanceExcelAction({
+        sessionType: "HM",
+        sessionIds: selectedHmSessionIds,
+      });
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setIsExportingSelectedHm(false);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported matrix for ${selectedHmSessionIds.length} selected HM session(s)!`);
+        setIsExportingSelectedHm(false);
+      }
+    });
+  }
+
+  function toggleSelectNmmsSession(id: string) {
+    setSelectedNmmsSessionIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
+
+  function toggleSelectAllNmmsSessions(currentPaginated: any[]) {
+    const pageIds = currentPaginated.map((s) => s.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedNmmsSessionIds.includes(id));
+    if (allSelected) {
+      setSelectedNmmsSessionIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedNmmsSessionIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  }
+
+  function handleDownloadSelectedNmms() {
+    if (selectedNmmsSessionIds.length === 0) {
+      toast.error("Please select at least one NMMS session to download.");
+      return;
+    }
+    setIsExportingSelectedNmms(true);
+    startTransition(async () => {
+      const res = await exportConsolidatedAttendanceExcelAction({
+        sessionType: "NMMS",
+        sessionIds: selectedNmmsSessionIds,
+      });
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setIsExportingSelectedNmms(false);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported matrix for ${selectedNmmsSessionIds.length} selected NMMS session(s)!`);
+        setIsExportingSelectedNmms(false);
+      }
+    });
+  }
+
+  function toggleSelectBrteSession(id: string) {
+    setSelectedBrteSessionIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
+
+  function toggleSelectAllBrteSessions(currentPaginated: any[]) {
+    const pageIds = currentPaginated.map((s) => s.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedBrteSessionIds.includes(id));
+    if (allSelected) {
+      setSelectedBrteSessionIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    } else {
+      setSelectedBrteSessionIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    }
+  }
+
+  function handleDownloadSelectedBrte() {
+    if (selectedBrteSessionIds.length === 0) {
+      toast.error("Please select at least one BRTE session to download.");
+      return;
+    }
+    setIsExportingSelectedBrte(true);
+    startTransition(async () => {
+      const res = await exportConsolidatedBrteAttendanceExcelAction({
+        sessionIds: selectedBrteSessionIds,
+      });
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setIsExportingSelectedBrte(false);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported matrix for ${selectedBrteSessionIds.length} selected BRTE session(s)!`);
+        setIsExportingSelectedBrte(false);
+      }
+    });
+  }
+
   // ---------------------------------------------------------------------------
-  // TEACHER SESSION HANDLERS
+  // HM & NMMS SESSION HANDLERS
   // ---------------------------------------------------------------------------
 
-  function handleCreateSession(e: React.FormEvent) {
+  function handleCreateHmSession(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
       const res = await createSessionAction({
-        title,
-        description,
-        sessionDate,
-        startTime: startTime || undefined,
-        endTime: endTime || undefined,
-        generalMeetUrl,
-        categoryTypes: selectedCategories,
-        schoolTypes: selectedSchoolTypes,
-        blocks: selectedBlocks,
+        sessionType: "HM",
+        title: hmTitle,
+        description: hmDescription,
+        sessionDate: hmSessionDate,
+        startTime: hmStartTime || undefined,
+        endTime: hmEndTime || undefined,
+        generalMeetUrl: hmGeneralMeetUrl,
+        categoryTypes: hmSelectedCategories,
+        schoolTypes: hmSelectedSchoolTypes,
+        blocks: hmSelectedBlocks,
       });
 
       if (res.error) {
-        toast.error(`Failed to create session: ${res.error}`);
+        toast.error(`Failed to create HM session: ${res.error}`);
       } else {
-        toast.success("Training Session created successfully!");
+        toast.success("HM Training Session created successfully!");
         if (res.createdSession) {
           setSessions((prev) => [res.createdSession, ...prev]);
         }
-        setTitle("");
-        setDescription("");
-        setSessionDate("");
-        setStartTime("");
-        setEndTime("");
-        setGeneralMeetUrl("");
-        setSelectedCategories([]);
-        setSelectedSchoolTypes([]);
-        setSelectedBlocks([]);
-        setActiveTab("sessions");
+        setHmTitle("");
+        setHmDescription("");
+        setHmSessionDate("");
+        setHmStartTime("");
+        setHmEndTime("");
+        setHmGeneralMeetUrl("");
+        setHmSelectedCategories([]);
+        setHmSelectedSchoolTypes([]);
+        setHmSelectedBlocks([]);
+        setActiveTab("hm-sessions");
+        router.refresh();
+      }
+    });
+  }
+
+  function handleCreateNmmsSession(e: React.FormEvent) {
+    e.preventDefault();
+    startTransition(async () => {
+      const res = await createSessionAction({
+        sessionType: "NMMS",
+        title: nmmsTitle,
+        description: nmmsDescription,
+        sessionDate: nmmsSessionDate,
+        startTime: nmmsStartTime || undefined,
+        endTime: nmmsEndTime || undefined,
+        generalMeetUrl: nmmsGeneralMeetUrl,
+        categoryTypes: nmmsSelectedCategories,
+        schoolTypes: nmmsSelectedSchoolTypes,
+        blocks: nmmsSelectedBlocks,
+        includeBrte: nmmsIncludeBrte,
+      });
+
+      if (res.error) {
+        toast.error(`Failed to create NMMS session: ${res.error}`);
+      } else {
+        toast.success("NMMS Training Session created successfully!");
+        if (res.createdSession) {
+          setSessions((prev) => [res.createdSession, ...prev]);
+        }
+        setNmmsTitle("");
+        setNmmsDescription("");
+        setNmmsSessionDate("");
+        setNmmsStartTime("");
+        setNmmsEndTime("");
+        setNmmsGeneralMeetUrl("");
+        setNmmsSelectedCategories([]);
+        setNmmsSelectedSchoolTypes([]);
+        setNmmsSelectedBlocks([]);
+        setNmmsIncludeBrte(false);
+        setActiveTab("nmms-sessions");
         router.refresh();
       }
     });
@@ -294,6 +532,7 @@ export default function AdminDashboardClient({
   function openEditSession(s: any) {
     setEditingSession({
       id: s.id,
+      sessionType: s.sessionType || "NMMS",
       title: s.title ?? "",
       description: s.description ?? "",
       generalMeetUrl: s.generalMeetUrl ?? "",
@@ -303,6 +542,7 @@ export default function AdminDashboardClient({
       categoryTypes: s.categoryRules ? s.categoryRules.map((r: any) => r.categoryType) : [],
       schoolTypes: s.schoolTypeRules ? s.schoolTypeRules.map((r: any) => r.schoolType) : [],
       blocks: s.blockRules ? s.blockRules.map((r: any) => r.block) : [],
+      includeBrte: Boolean(s.includeBrte),
     });
   }
 
@@ -325,6 +565,7 @@ export default function AdminDashboardClient({
 
     startTransition(async () => {
       const res = await updateSessionAction(editingSession.id, {
+        sessionType: editingSession.sessionType,
         title: editingSession.title.trim(),
         description: editingSession.description?.trim() || undefined,
         generalMeetUrl: editingSession.generalMeetUrl.trim(),
@@ -334,6 +575,7 @@ export default function AdminDashboardClient({
         categoryTypes: editingSession.categoryTypes || [],
         schoolTypes: editingSession.schoolTypes || [],
         blocks: editingSession.blocks || [],
+        includeBrte: editingSession.includeBrte,
       });
       if (res.error) {
         toast.error(`Update failed: ${res.error}`);
@@ -384,7 +626,8 @@ export default function AdminDashboardClient({
     });
   }
 
-  function handleExportConsolidatedAttendance() {
+  function handleExportConsolidatedAttendance(type: "HM" | "NMMS") {
+    setExportMatrixSessionType(type);
     setExportFilterCategories([]);
     setExportFilterSchoolTypes([]);
     setExportFilterBlocks([]);
@@ -408,6 +651,7 @@ export default function AdminDashboardClient({
         categoryTypes: exportFilterCategories.length > 0 ? exportFilterCategories : undefined,
         schoolTypes: exportFilterSchoolTypes.length > 0 ? exportFilterSchoolTypes : undefined,
         blocks: exportFilterBlocks.length > 0 ? exportFilterBlocks : undefined,
+        sessionType: exportMatrixSessionType,
       });
       if (res.error || !res.base64 || !res.filename) {
         toast.error(`Export failed: ${res.error}`);
@@ -419,7 +663,7 @@ export default function AdminDashboardClient({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(`Exported master teachers attendance matrix (${res.count} schools)!`);
+        toast.success(`Exported master ${exportMatrixSessionType} attendance matrix (${res.count} schools)!`);
         setIsExportingConsolidated(false);
         setIsExportSchoolsMatrixOpen(false);
       }
@@ -654,19 +898,20 @@ export default function AdminDashboardClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
+    <div className="min-h-screen bg-[hsl(220,14%,96%)] text-gray-900 font-sans flex flex-col">
       {/* ── Header Navbar ── */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-40 bg-[hsl(213,56%,24%)] shadow-md">
+        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[hsl(40,80%,50%)]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded bg-[hsl(213,56%,24%)] flex items-center justify-center text-white shrink-0 shadow-sm">
+            <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center text-white shrink-0">
               <Landmark className="w-5 h-5" />
             </div>
             <div className="truncate">
-              <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-tight truncate">
+              <span className="font-extrabold text-base tracking-tight text-white block leading-tight truncate">
                 CEO - Madurai
               </span>
-              <span className="text-xs font-bold text-black uppercase tracking-wider block truncate">
+              <span className="text-[10px] font-bold text-[hsl(40,80%,50%)] uppercase tracking-wider block truncate">
                 Gmeet Attendance Portal (Admin)
               </span>
             </div>
@@ -674,14 +919,14 @@ export default function AdminDashboardClient({
 
           <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9">
+              <Avatar className="h-9 w-9 ring-white/30">
                 <AvatarFallback>AD</AvatarFallback>
               </Avatar>
               <div className="hidden sm:block text-left">
-                <div className="text-sm font-semibold text-gray-900 leading-tight">
+                <div className="text-sm font-semibold text-white leading-tight">
                   {adminName}
                 </div>
-                <div className="text-xs text-gray-500 font-medium">Administrator</div>
+                <div className="text-xs text-white/70 font-medium">Administrator</div>
               </div>
             </div>
 
@@ -690,7 +935,7 @@ export default function AdminDashboardClient({
                 variant="outline"
                 size="sm"
                 type="submit"
-                className="gap-2 text-xs h-9 text-gray-600 font-semibold"
+                className="gap-2 text-xs h-9 border-white/20 text-white/80 hover:bg-white/10 hover:text-white bg-transparent font-semibold"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sign Out</span>
@@ -701,12 +946,14 @@ export default function AdminDashboardClient({
       </header>
 
       {/* ── Responsive Navigation Tabs ── */}
-      <div className="bg-white border-b border-gray-200 sticky top-16 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-2 overflow-x-auto py-2.5">
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto">
           {[
             { id: "overview", label: "Dashboard", icon: Layers },
-            { id: "sessions", label: "Teachers Sessions", icon: Video },
-            { id: "new-session", label: "New Teachers Session", icon: Plus },
+            { id: "hm-sessions", label: "HM Sessions", icon: GraduationCap },
+            { id: "new-hm-session", label: "New HM Session", icon: Plus },
+            { id: "nmms-sessions", label: "NMMS Sessions", icon: Video },
+            { id: "new-nmms-session", label: "New NMMS Session", icon: Plus },
             { id: "brte-sessions", label: "BRTE Sessions", icon: BookOpen },
             { id: "new-brte-session", label: "New BRTE Session", icon: Plus },
             { id: "schools", label: "Schools", icon: SchoolIcon },
@@ -718,10 +965,10 @@ export default function AdminDashboardClient({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-2 px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
                   isActive
-                    ? "bg-blue-50 text-[hsl(213,56%,24%)]"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)]"
+                    : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
                 }`}
               >
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-[hsl(213,56%,24%)]" : "text-gray-400"}`} />
@@ -737,14 +984,14 @@ export default function AdminDashboardClient({
         {/* ── TAB 1: OVERVIEW ── */}
         {activeTab === "overview" && (
           <div className="space-y-6 animate-fade-up">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Total Schools</p>
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">Total Schools</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900">{schools.length}</p>
                   </div>
-                  <div className="p-2 sm:p-3 rounded-lg bg-blue-50 text-blue-600 shrink-0">
+                  <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,45%,94%)] text-[hsl(213,56%,24%)] shrink-0">
                     <SchoolIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </CardContent>
@@ -753,10 +1000,22 @@ export default function AdminDashboardClient({
               <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">Teachers Sessions</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{sessions.length}</p>
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">HM Sessions</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{hmSessions.length}</p>
                   </div>
-                  <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,56%,24%)]/10 text-[hsl(213,56%,24%)] shrink-0">
+                  <div className="p-2 sm:p-3 rounded-lg bg-indigo-50 text-indigo-700 shrink-0">
+                    <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">NMMS Sessions</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900">{nmmsSessions.length}</p>
+                  </div>
+                  <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,45%,94%)] text-[hsl(213,56%,24%)] shrink-0">
                     <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </CardContent>
@@ -765,10 +1024,10 @@ export default function AdminDashboardClient({
               <Card>
                 <CardContent className="p-4 sm:p-5 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">BRTE Sessions</p>
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">BRTE Sessions</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900">{brteSessions.length}</p>
                   </div>
-                  <div className="p-2 sm:p-3 rounded-lg bg-purple-50 text-purple-600 shrink-0">
+                  <div className="p-2 sm:p-3 rounded-lg bg-purple-50 text-purple-700 shrink-0">
                     <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </CardContent>
@@ -779,31 +1038,46 @@ export default function AdminDashboardClient({
               <h2 className="text-lg font-bold text-gray-900">Recent Sessions Overview</h2>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  onClick={handleExportConsolidatedAttendance}
-                  disabled={isExportingConsolidated || sessions.length === 0}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                  onClick={() => handleExportConsolidatedAttendance("HM")}
+                  disabled={isExportingConsolidated || hmSessions.length === 0}
+                  className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white font-bold gap-2 text-xs h-9 shadow-xs"
                 >
-                  {isExportingConsolidated ? (
+                  {isExportingConsolidated && exportMatrixSessionType === "HM" ? (
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <Download className="w-3.5 h-3.5" />
                   )}
-                  Export Master Schools Matrix
+                  Export HM Matrix
+                </Button>
+                <Button
+                  onClick={() => handleExportConsolidatedAttendance("NMMS")}
+                  disabled={isExportingConsolidated || nmmsSessions.length === 0}
+                  className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                >
+                  {isExportingConsolidated && exportMatrixSessionType === "NMMS" ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  Export NMMS Matrix
                 </Button>
                 <Button
                   onClick={handleExportConsolidatedBrteAttendance}
                   disabled={isExportingConsolidatedBrte || brteSessions.length === 0}
-                  className="bg-purple-700 hover:bg-purple-800 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                  className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white font-bold gap-2 text-xs h-9 shadow-xs"
                 >
                   {isExportingConsolidatedBrte ? (
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <Download className="w-3.5 h-3.5" />
                   )}
-                  Export Master BRTE Matrix
+                  Export BRTE Matrix
                 </Button>
-                <Button onClick={() => setActiveTab("new-session")} className="gap-2 text-xs h-9">
-                  <Plus className="w-4 h-4" /> Schedule Teachers Session
+                <Button onClick={() => setActiveTab("new-hm-session")} className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule HM Session
+                </Button>
+                <Button onClick={() => setActiveTab("new-nmms-session")} className="gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule NMMS Session
                 </Button>
                 <Button onClick={() => setActiveTab("new-brte-session")} variant="outline" className="gap-2 text-xs h-9">
                   <Plus className="w-4 h-4" /> Schedule BRTE Session
@@ -811,46 +1085,577 @@ export default function AdminDashboardClient({
               </div>
             </div>
 
-            {/* Teachers Sessions summary table */}
+            {/* Recent HM Sessions summary table */}
             <Card>
-              <CardHeader className="py-4 border-b border-gray-100 bg-gray-50/50">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Video className="w-4 h-4 text-blue-600" />
-                  Teachers Sessions
-                 </CardTitle>
+              <CardHeader className="py-4 border-b border-gray-200 bg-gray-50/80">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-indigo-600" />
+                    Recent HM Sessions
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("hm-sessions")} className="text-xs text-indigo-600 font-semibold h-7">
+                    View All ({hmSessions.length}) &rarr;
+                  </Button>
+                </CardTitle>
               </CardHeader>
+              <CardContent className="p-0">
+                {hmSessions.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-500">No HM sessions scheduled yet.</p>
+                ) : (
+                  <>
+                    {/* Mobile card list */}
+                    <div className="divide-y divide-gray-100 md:hidden">
+                      {hmSessions.slice(0, 5).map((s) => {
+                        const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                        const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                        return (
+                          <div key={s.id} className="px-4 py-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                  {formattedTime && <span className="ml-2">{formattedTime}</span>}
+                                </p>
+                              </div>
+                              {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Button size="sm" className="h-7 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                Export
+                              </Button>
+                              {expired ? (
+                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                              ) : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                                  Open Meet <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                              <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Date &amp; Time</TableHead>
+                            <TableHead>Google Meet Link</TableHead>
+                            <TableHead>Target Rules</TableHead>
+                            <TableHead>Exports</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {hmSessions.slice(0, 5).map((s) => {
+                            const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                            const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                            return (
+                              <TableRow key={s.id}>
+                                <TableCell className="font-semibold text-gray-900">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate max-w-[200px]">{s.title}</span>
+                                    {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                                  {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
+                                </TableCell>
+                                <TableCell>
+                                  {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                    <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {(!s.categoryRules?.length && !s.schoolTypeRules?.length && !s.blockRules?.length) ? (
+                                    <Badge variant="secondary">All Schools</Badge>
+                                  ) : (
+                                    <div className="flex gap-1 flex-wrap max-w-[220px]">
+                                      {s.categoryRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>)}
+                                      {s.schoolTypeRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>)}
+                                      {s.blockRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>)}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Button size="sm" className="h-8 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                    {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                    Export
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent NMMS Sessions summary table */}
+            <Card>
+              <CardHeader className="py-4 border-b border-gray-200 bg-gray-50/80">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Video className="w-4 h-4 text-blue-600" />
+                    Recent NMMS Sessions
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab("nmms-sessions")} className="text-xs text-blue-600 font-semibold h-7">
+                    View All ({nmmsSessions.length}) &rarr;
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {nmmsSessions.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-500">No NMMS sessions scheduled yet.</p>
+                ) : (
+                  <>
+                    {/* Mobile card list */}
+                    <div className="divide-y divide-gray-100 md:hidden">
+                      {nmmsSessions.slice(0, 5).map((s) => {
+                        const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                        const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                        return (
+                          <div key={s.id} className="px-4 py-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                                  {s.includeBrte && (
+                                    <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-semibold">
+                                      BRTEs Included
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                  {formattedTime && <span className="ml-2">{formattedTime}</span>}
+                                </p>
+                              </div>
+                              {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Button size="sm" className="h-7 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                Export
+                              </Button>
+                              {expired ? (
+                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                              ) : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                                  Open Meet <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                              <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Date &amp; Time</TableHead>
+                            <TableHead>Google Meet Link</TableHead>
+                            <TableHead>Target Rules</TableHead>
+                            <TableHead>Exports</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {nmmsSessions.slice(0, 5).map((s) => {
+                            const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                            const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                            return (
+                              <TableRow key={s.id}>
+                                <TableCell className="font-semibold text-gray-900">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate max-w-[200px]">{s.title}</span>
+                                    {s.includeBrte && (
+                                      <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-semibold">
+                                        BRTEs
+                                      </Badge>
+                                    )}
+                                    {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                                  {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
+                                </TableCell>
+                                <TableCell>
+                                  {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                    <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {(!s.categoryRules?.length && !s.schoolTypeRules?.length && !s.blockRules?.length) ? (
+                                    <Badge variant="secondary">All Schools</Badge>
+                                  ) : (
+                                    <div className="flex gap-1 flex-wrap max-w-[220px]">
+                                      {s.categoryRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{r.categoryType.replace("_", " ")}</Badge>)}
+                                      {s.schoolTypeRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.schoolType}</Badge>)}
+                                      {s.blockRules?.map((r: any) => <Badge key={r.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">{r.block}</Badge>)}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Button size="sm" className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                    {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                    Export
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* BRTE Sessions summary */}
+            {brteSessions.length > 0 && (
+              <div className="space-y-3">
+                {/* Selection Action Bar */}
+                {selectedBrteSessionIds.length > 0 && (
+                  <div className="flex items-center justify-between p-3.5 bg-purple-50 border border-purple-200 rounded-xl shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-2 text-purple-950 font-bold text-sm">
+                      <div className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs">
+                        {selectedBrteSessionIds.length}
+                      </div>
+                      <span>BRTE Session(s) Selected</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleDownloadSelectedBrte}
+                        disabled={isExportingSelectedBrte}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs h-8 shadow-xs"
+                      >
+                        {isExportingSelectedBrte ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        Download Selected ({selectedBrteSessionIds.length})
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedBrteSessionIds([])}
+                        className="text-xs text-gray-600 hover:text-gray-900 h-8"
+                      >
+                        Deselect All
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <Card>
+                  <CardHeader className="py-4 border-b border-gray-200 bg-gray-50/80">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-purple-600" />
+                      BRTE Sessions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {/* Mobile card list */}
+                    <div className="divide-y divide-gray-100 md:hidden">
+                      {paginatedBrteSessions.map((s) => {
+                        const isSelected = selectedBrteSessionIds.includes(s.id);
+                        const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                        const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                        return (
+                          <div key={s.id} className={`px-4 py-3 space-y-2 ${isSelected ? "bg-purple-50/50" : ""}`}>
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                aria-label="Select BRTE session"
+                                checked={isSelected}
+                                onChange={() => toggleSelectBrteSession(s.id)}
+                                className="w-4 h-4 mt-1 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                      {formattedTime && <span className="ml-2">{formattedTime}</span>}
+                                    </p>
+                                  </div>
+                                  {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap mt-2">
+                                  <Button size="sm" className="h-7 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
+                                    {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                    Export
+                                  </Button>
+                                  {expired ? (
+                                    <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                                  ) : (
+                                    <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                                      Open Meet <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  )}
+                                  <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                                  <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label="Select all BRTE sessions on page"
+                                checked={
+                                  paginatedBrteSessions.length > 0 &&
+                                  paginatedBrteSessions.every((s) => selectedBrteSessionIds.includes(s.id))
+                                }
+                                onChange={() => toggleSelectAllBrteSessions(paginatedBrteSessions)}
+                                className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                              />
+                            </TableHead>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Date &amp; Time</TableHead>
+                            <TableHead>Google Meet Link</TableHead>
+                            <TableHead>Target Blocks</TableHead>
+                            <TableHead>Exports</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedBrteSessions.map((s) => {
+                            const isSelected = selectedBrteSessionIds.includes(s.id);
+                            const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
+                            const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
+                            return (
+                              <TableRow key={s.id} className={isSelected ? "bg-purple-50/40" : ""}>
+                                <TableCell className="w-12 text-center">
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`Select session ${s.title}`}
+                                    checked={isSelected}
+                                    onChange={() => toggleSelectBrteSession(s.id)}
+                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                                  />
+                                </TableCell>
+                                <TableCell className="font-semibold text-gray-900">
+                                  <div className="flex items-center gap-2"><span className="truncate max-w-[200px]">{s.title}</span>{expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                                  {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
+                                </TableCell>
+                                <TableCell>
+                                  {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                    <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {(!s.blockRules || s.blockRules.length === 0) ? <Badge variant="secondary">All BRTEs</Badge> : (
+                                    <div className="flex gap-1 flex-wrap max-w-[220px]">{s.blockRules.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>)}</div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Button size="sm" className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
+                                    {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                    Export
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalBrtePages > 1 && (
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-200 bg-gray-50/50">
+                        <p className="text-xs text-gray-500 font-medium">
+                          Showing <span className="font-semibold text-gray-800">{(currentBrtePage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
+                          <span className="font-semibold text-gray-800">{Math.min(currentBrtePage * ITEMS_PER_PAGE, brteSessions.length)}</span> of{" "}
+                          <span className="font-semibold text-gray-800">{brteSessions.length}</span> BRTE sessions
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentBrtePage === 1}
+                            onClick={() => setBrtePage((p) => Math.max(1, p - 1))}
+                            className="h-8 text-xs font-semibold"
+                          >
+                            <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                          </Button>
+                          <span className="text-xs font-semibold px-2 text-gray-700">
+                            Page {currentBrtePage} of {totalBrtePages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={currentBrtePage >= totalBrtePages}
+                            onClick={() => setBrtePage((p) => Math.min(totalBrtePages, p + 1))}
+                            className="h-8 text-xs font-semibold"
+                          >
+                            Next <ChevronRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB 2: HM SESSIONS LIST ── */}
+        {activeTab === "hm-sessions" && (
+          <div className="space-y-6 animate-fade-up">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-indigo-600" />
+                  Headmasters (HM) Sessions
+                </h2>
+                <p className="text-sm text-gray-500">Manage HM meetings and export school attendance.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <Button
+                  onClick={() => handleExportConsolidatedAttendance("HM")}
+                  disabled={isExportingConsolidated || hmSessions.length === 0}
+                  className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                >
+                  {isExportingConsolidated && exportMatrixSessionType === "HM" ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  Export Master HM Matrix
+                </Button>
+                <Button onClick={() => setActiveTab("new-hm-session")} className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white w-full sm:w-auto gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule HM Session
+                </Button>
+              </div>
+            </div>
+
+            {/* Selection Action Bar */}
+            {selectedHmSessionIds.length > 0 && (
+              <div className="flex items-center justify-between p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2 text-indigo-950 font-bold text-sm">
+                  <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">
+                    {selectedHmSessionIds.length}
+                  </div>
+                  <span>HM Session(s) Selected</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleDownloadSelectedHm}
+                    disabled={isExportingSelectedHm}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs h-8 shadow-xs"
+                  >
+                    {isExportingSelectedHm ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                    Download Selected ({selectedHmSessionIds.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedHmSessionIds([])}
+                    className="text-xs text-gray-600 hover:text-gray-900 h-8"
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <Card>
               <CardContent className="p-0">
                 {/* Mobile card list */}
                 <div className="divide-y divide-gray-100 md:hidden">
-                  {sessions.slice(0, 5).map((s) => {
+                  {hmSessions.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-500">No HM sessions yet. Click &quot;Schedule HM Session&quot; to create one.</p>
+                  ) : paginatedHmSessions.map((s) => {
+                    const isSelected = selectedHmSessionIds.includes(s.id);
                     const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
                     const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
                     return (
-                      <div key={s.id} className="px-4 py-3 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                              {formattedTime && <span className="ml-2">{formattedTime}</span>}
-                            </p>
+                      <div key={s.id} className={`px-4 py-3 space-y-2 ${isSelected ? "bg-indigo-50/50" : ""}`}>
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            aria-label="Select HM session"
+                            checked={isSelected}
+                            onChange={() => toggleSelectHmSession(s.id)}
+                            className="w-4 h-4 mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                  {formattedTime && <span className="ml-1.5">{formattedTime}</span>}
+                                </p>
+                              </div>
+                              {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap mt-2">
+                              <Button size="sm" className="h-7 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                Export Excel
+                              </Button>
+                              {expired ? (
+                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                              ) : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                                  Open Meet <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                              <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                            </div>
                           </div>
-                          {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Button size="sm" className="h-7 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
-                            {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
-                            Export
-                          </Button>
-                          {expired ? (
-                            <span className="text-xs text-gray-500 font-medium">Link closed</span>
-                          ) : (
-                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
-                              Open Meet <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                          <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
                       </div>
                     );
@@ -861,34 +1666,50 @@ export default function AdminDashboardClient({
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label="Select all HM sessions on page"
+                            checked={
+                              paginatedHmSessions.length > 0 &&
+                              paginatedHmSessions.every((s) => selectedHmSessionIds.includes(s.id))
+                            }
+                            onChange={() => toggleSelectAllHmSessions(paginatedHmSessions)}
+                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          />
+                        </TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Date &amp; Time</TableHead>
-                        <TableHead>Google Meet Link</TableHead>
                         <TableHead>Target Rules</TableHead>
+                        <TableHead>Google Meet Link</TableHead>
                         <TableHead>Exports</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions.slice(0, 5).map((s) => {
+                      {hmSessions.length === 0 ? (
+                        <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-500">No HM sessions scheduled yet.</TableCell></TableRow>
+                      ) : paginatedHmSessions.map((s) => {
+                        const isSelected = selectedHmSessionIds.includes(s.id);
                         const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
                         const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
                         return (
-                          <TableRow key={s.id}>
+                          <TableRow key={s.id} className={isSelected ? "bg-indigo-50/40" : ""}>
+                            <TableCell className="w-12 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Select session ${s.title}`}
+                                checked={isSelected}
+                                onChange={() => toggleSelectHmSession(s.id)}
+                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              />
+                            </TableCell>
                             <TableCell className="font-semibold text-gray-900">
-                              <div className="flex items-center gap-2">
-                                <span className="truncate max-w-[200px]">{s.title}</span>
-                                {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
-                              </div>
+                              <div className="flex items-center gap-2"><span className="truncate max-w-[200px]">{s.title}</span>{expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}</div>
                             </TableCell>
                             <TableCell>
                               <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
                               {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
-                            </TableCell>
-                            <TableCell>
-                              {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
-                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
-                              )}
                             </TableCell>
                             <TableCell>
                               {(!s.categoryRules?.length && !s.schoolTypeRules?.length && !s.blockRules?.length) ? (
@@ -902,9 +1723,14 @@ export default function AdminDashboardClient({
                               )}
                             </TableCell>
                             <TableCell>
-                              <Button size="sm" className="h-8 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                              {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button size="sm" className="h-8 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
                                 {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
-                                Export
+                                Export Excel
                               </Button>
                             </TableCell>
                             <TableCell className="text-right">
@@ -919,177 +1745,325 @@ export default function AdminDashboardClient({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalHmPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-200 bg-gray-50/50">
+                    <p className="text-xs text-gray-500 font-medium">
+                      Showing <span className="font-semibold text-gray-800">{(currentHmPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
+                      <span className="font-semibold text-gray-800">{Math.min(currentHmPage * ITEMS_PER_PAGE, hmSessions.length)}</span> of{" "}
+                      <span className="font-semibold text-gray-800">{hmSessions.length}</span> HM sessions
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentHmPage === 1}
+                        onClick={() => setHmPage((p) => Math.max(1, p - 1))}
+                        className="h-8 text-xs font-semibold"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                      </Button>
+                      <span className="text-xs font-semibold px-2 text-gray-700">
+                        Page {currentHmPage} of {totalHmPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentHmPage >= totalHmPages}
+                        onClick={() => setHmPage((p) => Math.min(totalHmPages, p + 1))}
+                        className="h-8 text-xs font-semibold"
+                      >
+                        Next <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            {/* BRTE Sessions summary */}
-            {brteSessions.length > 0 && (
-              <Card>
-                <CardHeader className="py-4 border-b border-gray-100 bg-gray-50/50">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-purple-600" />
-                    BRTE Sessions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {/* Mobile card list */}
-                  <div className="divide-y divide-gray-100 md:hidden">
-                    {brteSessions.slice(0, 5).map((s) => {
-                      const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
-                      const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
-                      return (
-                        <div key={s.id} className="px-4 py-3 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">
-                                {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                                {formattedTime && <span className="ml-2">{formattedTime}</span>}
-                              </p>
-                            </div>
-                            {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Button size="sm" className="h-7 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
-                              {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
-                              Export
-                            </Button>
-                            {expired ? (
-                              <span className="text-xs text-gray-500 font-medium">Link closed</span>
-                            ) : (
-                              <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
-                                Open Meet <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                            <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Desktop table */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Date &amp; Time</TableHead>
-                          <TableHead>Google Meet Link</TableHead>
-                          <TableHead>Target Blocks</TableHead>
-                          <TableHead>Exports</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {brteSessions.slice(0, 5).map((s) => {
-                          const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
-                          const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
-                          return (
-                            <TableRow key={s.id}>
-                              <TableCell className="font-semibold text-gray-900">
-                                <div className="flex items-center gap-2"><span className="truncate max-w-[200px]">{s.title}</span>{expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}</div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                                {formattedTime && <div className="text-[11px] text-gray-500 flex items-center gap-1 mt-1"><Clock className="w-3 h-3" /> {formattedTime}</div>}
-                              </TableCell>
-                              <TableCell>
-                                {expired ? <span className="text-xs text-gray-500 font-medium">Link closed</span> : (
-                                  <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">Open Meet <ExternalLink className="w-3 h-3" /></a>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {(!s.blockRules || s.blockRules.length === 0) ? <Badge variant="secondary">All BRTEs</Badge> : (
-                                  <div className="flex gap-1 flex-wrap max-w-[220px]">{s.blockRules.map((r: any) => <Badge key={r.id} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">{r.block}</Badge>)}</div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button size="sm" className="h-8 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100" onClick={() => handleExportBrteSessionExcel(s.id, s.title)} disabled={exportingBrteSessionId === s.id}>
-                                  {exportingBrteSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
-                                  Export
-                                </Button>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button size="icon" variant="ghost" onClick={() => openEditBrteSession(s)} className="h-8 w-8 text-gray-500"><Edit2 className="w-4 h-4" /></Button>
-                                  <Button size="icon" variant="ghost" onClick={() => handleDeleteBrteSession(s.id)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         )}
 
-        {/* ── TAB 2: TEACHERS SESSIONS LIST ── */}
-        {activeTab === "sessions" && (
+        {/* ── TAB 3: CREATE NEW HM SESSION ── */}
+        {activeTab === "new-hm-session" && (
+          <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
+            <Card>
+              <CardHeader className="border-b border-gray-200 bg-gray-50/80">
+                <CardTitle className="flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-indigo-600" />
+                  Schedule HM Session
+                </CardTitle>
+                <CardDescription>
+                  Create a new training/review session for Headmasters/Principals with optional category, school type, and block targeting.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <form onSubmit={handleCreateHmSession} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-gray-700">HM Session Title <span className="text-red-500">*</span></label>
+                    <Input placeholder="e.g. High School HMs Review Meeting" value={hmTitle} onChange={(e) => setHmTitle(e.target.value)} required />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-gray-700">Description</label>
+                    <Input placeholder="Brief agenda or instructions" value={hmDescription} onChange={(e) => setHmDescription(e.target.value)} />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5 sm:col-span-1">
+                      <label className="text-sm font-semibold text-gray-700">Date <span className="text-red-500">*</span></label>
+                      <Input type="date" value={hmSessionDate} onChange={(e) => setHmSessionDate(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700">Start Time</label>
+                      <Input type="time" value={hmStartTime} onChange={(e) => setHmStartTime(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700">End Time</label>
+                      <Input type="time" value={hmEndTime} onChange={(e) => setHmEndTime(e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-gray-700">Google Meet URL <span className="text-red-500">*</span></label>
+                    <Input placeholder="https://meet.google.com/abc-defg-hij" value={hmGeneralMeetUrl} onChange={(e) => setHmGeneralMeetUrl(e.target.value)} required />
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-gray-100">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">1. Target School Category Types</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {CATEGORY_TYPE_OPTIONS.map((cat) => {
+                          const isSelected = hmSelectedCategories.includes(cat.id);
+                          return (
+                            <div
+                              key={cat.id}
+                              onClick={() => {
+                                if (isSelected) {
+                                  setHmSelectedCategories(hmSelectedCategories.filter((c) => c !== cat.id));
+                                } else {
+                                  setHmSelectedCategories([...hmSelectedCategories, cat.id]);
+                                }
+                              }}
+                              className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${
+                                isSelected
+                                  ? "bg-indigo-50 border-indigo-600 text-indigo-900"
+                                  : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white"}`}>
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                              <div className="text-xs font-semibold">{cat.label}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-3 border-t border-gray-100">
+                      <label className="text-sm font-semibold text-gray-700">2. Target School Types</label>
+                      {availableSchoolTypes.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No school type options found in database.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1">
+                          {availableSchoolTypes.map((st) => {
+                            const isSelected = hmSelectedSchoolTypes.includes(st);
+                            return (
+                              <div
+                                key={st}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setHmSelectedSchoolTypes(hmSelectedSchoolTypes.filter((s) => s !== st));
+                                  } else {
+                                    setHmSelectedSchoolTypes([...hmSelectedSchoolTypes, st]);
+                                  }
+                                }}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${
+                                  isSelected
+                                    ? "bg-purple-50 border-purple-600 text-purple-900"
+                                    : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-purple-600 bg-purple-600 text-white" : "border-gray-300 bg-white"}`}>
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <div className="text-xs font-semibold truncate">{st}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 pt-3 border-t border-gray-100">
+                      <label className="text-sm font-semibold text-gray-700">3. Target School Blocks</label>
+                      {availableBlocks.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No block options found in database.</p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
+                          {availableBlocks.map((blk) => {
+                            const isSelected = hmSelectedBlocks.includes(blk);
+                            return (
+                              <div
+                                key={blk}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setHmSelectedBlocks(hmSelectedBlocks.filter((b) => b !== blk));
+                                  } else {
+                                    setHmSelectedBlocks([...hmSelectedBlocks, blk]);
+                                  }
+                                }}
+                                className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                                  isSelected
+                                    ? "bg-[hsl(213,45%,94%)] border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)]"
+                                    : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "border-emerald-600 bg-emerald-600 text-white" : "border-gray-300 bg-white"}`}>
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <div className="text-xs font-semibold truncate">{blk}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-500 pt-1">
+                      {hmSelectedCategories.length === 0 && hmSelectedSchoolTypes.length === 0 && hmSelectedBlocks.length === 0
+                        ? "No filters selected. Session will be visible to ALL active schools."
+                        : `Targeting: ${hmSelectedCategories.length > 0 ? `${hmSelectedCategories.length} Category Type(s)` : "All Categories"} AND ${hmSelectedSchoolTypes.length > 0 ? `${hmSelectedSchoolTypes.length} School Type(s)` : "All School Types"} AND ${hmSelectedBlocks.length > 0 ? `${hmSelectedBlocks.length} Block(s)` : "All Blocks"}.`}
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isPending}>
+                      {isPending ? "Creating..." : "Save HM Session"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ── TAB 4: NMMS SESSIONS LIST ── */}
+        {activeTab === "nmms-sessions" && (
           <div className="space-y-6 animate-fade-up">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Teachers Training Sessions</h2>
-                <p className="text-sm text-gray-500">Manage teachers sessions and export attendance.</p>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Video className="w-5 h-5 text-blue-600" />
+                  NMMS Training Sessions
+                </h2>
+                <p className="text-sm text-gray-500">Manage NMMS teacher training sessions and export attendance.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                 <Button
-                  onClick={handleExportConsolidatedAttendance}
-                  disabled={isExportingConsolidated || sessions.length === 0}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                  onClick={() => handleExportConsolidatedAttendance("NMMS")}
+                  disabled={isExportingConsolidated || nmmsSessions.length === 0}
+                  className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white font-bold gap-2 text-xs h-9 shadow-xs"
                 >
-                  {isExportingConsolidated ? (
+                  {isExportingConsolidated && exportMatrixSessionType === "NMMS" ? (
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <Download className="w-3.5 h-3.5" />
                   )}
-                  Export Master Schools Matrix
+                  Export Master NMMS Matrix
                 </Button>
-                <Button onClick={() => setActiveTab("new-session")} className="w-full sm:w-auto gap-2 text-xs h-9">
-                  <Plus className="w-4 h-4" /> Schedule Teachers Session
+                <Button onClick={() => setActiveTab("new-nmms-session")} className="w-full sm:w-auto gap-2 text-xs h-9">
+                  <Plus className="w-4 h-4" /> Schedule NMMS Session
                 </Button>
               </div>
             </div>
+
+            {/* Selection Action Bar */}
+            {selectedNmmsSessionIds.length > 0 && (
+              <div className="flex items-center justify-between p-3.5 bg-blue-50 border border-blue-200 rounded-xl shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2 text-blue-950 font-bold text-sm">
+                  <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">
+                    {selectedNmmsSessionIds.length}
+                  </div>
+                  <span>NMMS Session(s) Selected</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleDownloadSelectedNmms}
+                    disabled={isExportingSelectedNmms}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs h-8 shadow-xs"
+                  >
+                    {isExportingSelectedNmms ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                    Download Selected ({selectedNmmsSessionIds.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedNmmsSessionIds([])}
+                    className="text-xs text-gray-600 hover:text-gray-900 h-8"
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <Card>
               <CardContent className="p-0">
                 {/* Mobile card list */}
                 <div className="divide-y divide-gray-100 md:hidden">
-                  {sessions.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-gray-500">No sessions yet.</p>
-                  ) : sessions.map((s) => {
+                  {nmmsSessions.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-gray-500">No NMMS sessions yet. Click &quot;Schedule NMMS Session&quot; to create one.</p>
+                  ) : paginatedNmmsSessions.map((s) => {
+                    const isSelected = selectedNmmsSessionIds.includes(s.id);
                     const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
                     const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
                     return (
-                      <div key={s.id} className="px-4 py-3 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                              {formattedTime && <span className="ml-1.5">{formattedTime}</span>}
-                            </p>
+                      <div key={s.id} className={`px-4 py-3 space-y-2 ${isSelected ? "bg-blue-50/50" : ""}`}>
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            aria-label="Select NMMS session"
+                            checked={isSelected}
+                            onChange={() => toggleSelectNmmsSession(s.id)}
+                            className="w-4 h-4 mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="font-semibold text-gray-900 text-sm truncate">{s.title}</p>
+                                  {s.includeBrte && (
+                                    <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-semibold">
+                                      BRTEs Included
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                  {formattedTime && <span className="ml-1.5">{formattedTime}</span>}
+                                </p>
+                              </div>
+                              {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap mt-2">
+                              <Button size="sm" className="h-7 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
+                                {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                                Export Excel
+                              </Button>
+                              {expired ? (
+                                <span className="text-xs text-gray-500 font-medium">Link closed</span>
+                              ) : (
+                                <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
+                                  Open Meet <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                              <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
+                            </div>
                           </div>
-                          {expired && <Badge variant="secondary" className="text-[10px] shrink-0">Ended</Badge>}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Button size="sm" className="h-7 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100" onClick={() => handleExportSessionExcel(s.id, s.title)} disabled={exportingSessionId === s.id}>
-                            {exportingSessionId === s.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
-                            Export Excel
-                          </Button>
-                          {expired ? (
-                            <span className="text-xs text-gray-500 font-medium">Link closed</span>
-                          ) : (
-                            <a href={s.generalMeetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold">
-                              Open Meet <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                          <Button size="icon" variant="ghost" onClick={() => openEditSession(s)} className="h-7 w-7 text-gray-500"><Edit2 className="w-3.5 h-3.5" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleDeleteSession(s.id)} className="h-7 w-7 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
                       </div>
                     );
@@ -1100,6 +2074,18 @@ export default function AdminDashboardClient({
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label="Select all NMMS sessions on page"
+                            checked={
+                              paginatedNmmsSessions.length > 0 &&
+                              paginatedNmmsSessions.every((s) => selectedNmmsSessionIds.includes(s.id))
+                            }
+                            onChange={() => toggleSelectAllNmmsSessions(paginatedNmmsSessions)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Date &amp; Time</TableHead>
                         <TableHead>Target Rules</TableHead>
@@ -1109,13 +2095,33 @@ export default function AdminDashboardClient({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions.map((s) => {
+                      {nmmsSessions.length === 0 ? (
+                        <TableRow><TableCell colSpan={7} className="text-center py-8 text-gray-500">No NMMS sessions scheduled yet.</TableCell></TableRow>
+                      ) : paginatedNmmsSessions.map((s) => {
+                        const isSelected = selectedNmmsSessionIds.includes(s.id);
                         const formattedTime = formatSessionTimeString(s.startTime, s.endTime);
                         const expired = isSessionExpired(s.sessionDate, s.endTime, s.startTime);
                         return (
-                          <TableRow key={s.id}>
+                          <TableRow key={s.id} className={isSelected ? "bg-blue-50/40" : ""}>
+                            <TableCell className="w-12 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Select session ${s.title}`}
+                                checked={isSelected}
+                                onChange={() => toggleSelectNmmsSession(s.id)}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              />
+                            </TableCell>
                             <TableCell className="font-semibold text-gray-900">
-                              <div className="flex items-center gap-2"><span className="truncate max-w-[200px]">{s.title}</span>{expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="truncate max-w-[200px]">{s.title}</span>
+                                {s.includeBrte && (
+                                  <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-semibold">
+                                    BRTEs Included
+                                  </Badge>
+                                )}
+                                {expired && <Badge variant="secondary" className="text-[10px]">Ended</Badge>}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="font-medium text-gray-900">{new Date(s.sessionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
@@ -1155,51 +2161,88 @@ export default function AdminDashboardClient({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalNmmsPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-gray-200 bg-gray-50/50">
+                    <p className="text-xs text-gray-500 font-medium">
+                      Showing <span className="font-semibold text-gray-800">{(currentNmmsPage - 1) * ITEMS_PER_PAGE + 1}</span> to{" "}
+                      <span className="font-semibold text-gray-800">{Math.min(currentNmmsPage * ITEMS_PER_PAGE, nmmsSessions.length)}</span> of{" "}
+                      <span className="font-semibold text-gray-800">{nmmsSessions.length}</span> NMMS sessions
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentNmmsPage === 1}
+                        onClick={() => setNmmsPage((p) => Math.max(1, p - 1))}
+                        className="h-8 text-xs font-semibold"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                      </Button>
+                      <span className="text-xs font-semibold px-2 text-gray-700">
+                        Page {currentNmmsPage} of {totalNmmsPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentNmmsPage >= totalNmmsPages}
+                        onClick={() => setNmmsPage((p) => Math.min(totalNmmsPages, p + 1))}
+                        className="h-8 text-xs font-semibold"
+                      >
+                        Next <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* ── TAB 3: CREATE NEW TEACHERS SESSION ── */}
-        {activeTab === "new-session" && (
+        {/* ── TAB 5: CREATE NEW NMMS SESSION ── */}
+        {activeTab === "new-nmms-session" && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
             <Card>
-              <CardHeader className="border-b border-gray-100 bg-gray-50/50">
-                <CardTitle>Schedule Teachers Session</CardTitle>
+              <CardHeader className="border-b border-gray-200 bg-gray-50/80">
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="w-5 h-5 text-blue-600" />
+                  Schedule NMMS Session
+                </CardTitle>
                 <CardDescription>
-                  Create a new training schedule and specify target school categories.
+                  Create a new training schedule and specify target school categories for NMMS teachers.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <form onSubmit={handleCreateSession} className="space-y-5">
+                <form onSubmit={handleCreateNmmsSession} className="space-y-5">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-gray-700">Teachers Session Title <span className="text-red-500">*</span></label>
-                    <Input placeholder="e.g. Teacher Orientation Session 1" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                    <label className="text-sm font-semibold text-gray-700">NMMS Session Title <span className="text-red-500">*</span></label>
+                    <Input placeholder="e.g. NMMS Coaching Session 1" value={nmmsTitle} onChange={(e) => setNmmsTitle(e.target.value)} required />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-gray-700">Description</label>
-                    <Input placeholder="Brief agenda or instructions" value={description} onChange={(e) => setDescription(e.target.value)} />
+                    <Input placeholder="Brief agenda or instructions" value={nmmsDescription} onChange={(e) => setNmmsDescription(e.target.value)} />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5 sm:col-span-1">
                       <label className="text-sm font-semibold text-gray-700">Date <span className="text-red-500">*</span></label>
-                      <Input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} required />
+                      <Input type="date" value={nmmsSessionDate} onChange={(e) => setNmmsSessionDate(e.target.value)} required />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-gray-700">Start Time</label>
-                      <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                      <Input type="time" value={nmmsStartTime} onChange={(e) => setNmmsStartTime(e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-gray-700">End Time</label>
-                      <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                      <Input type="time" value={nmmsEndTime} onChange={(e) => setNmmsEndTime(e.target.value)} />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-gray-700">Google Meet URL <span className="text-red-500">*</span></label>
-                    <Input placeholder="https://meet.google.com/abc-defg-hij" value={generalMeetUrl} onChange={(e) => setGeneralMeetUrl(e.target.value)} required />
+                    <Input placeholder="https://meet.google.com/abc-defg-hij" value={nmmsGeneralMeetUrl} onChange={(e) => setNmmsGeneralMeetUrl(e.target.value)} required />
                   </div>
 
                   <div className="space-y-4 pt-4 border-t border-gray-100">
@@ -1207,15 +2250,15 @@ export default function AdminDashboardClient({
                       <label className="text-sm font-semibold text-gray-700">1. Target School Category Types</label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {CATEGORY_TYPE_OPTIONS.map((cat) => {
-                          const isSelected = selectedCategories.includes(cat.id);
+                          const isSelected = nmmsSelectedCategories.includes(cat.id);
                           return (
                             <div
                               key={cat.id}
                               onClick={() => {
                                 if (isSelected) {
-                                  setSelectedCategories(selectedCategories.filter((c) => c !== cat.id));
+                                  setNmmsSelectedCategories(nmmsSelectedCategories.filter((c) => c !== cat.id));
                                 } else {
-                                  setSelectedCategories([...selectedCategories, cat.id]);
+                                  setNmmsSelectedCategories([...nmmsSelectedCategories, cat.id]);
                                 }
                               }}
                               className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${
@@ -1241,15 +2284,15 @@ export default function AdminDashboardClient({
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1">
                           {availableSchoolTypes.map((st) => {
-                            const isSelected = selectedSchoolTypes.includes(st);
+                            const isSelected = nmmsSelectedSchoolTypes.includes(st);
                             return (
                               <div
                                 key={st}
                                 onClick={() => {
                                   if (isSelected) {
-                                    setSelectedSchoolTypes(selectedSchoolTypes.filter((s) => s !== st));
+                                    setNmmsSelectedSchoolTypes(nmmsSelectedSchoolTypes.filter((s) => s !== st));
                                   } else {
-                                    setSelectedSchoolTypes([...selectedSchoolTypes, st]);
+                                    setNmmsSelectedSchoolTypes([...nmmsSelectedSchoolTypes, st]);
                                   }
                                 }}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-3 ${
@@ -1276,20 +2319,20 @@ export default function AdminDashboardClient({
                       ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
                           {availableBlocks.map((blk) => {
-                            const isSelected = selectedBlocks.includes(blk);
+                            const isSelected = nmmsSelectedBlocks.includes(blk);
                             return (
                               <div
                                 key={blk}
                                 onClick={() => {
                                   if (isSelected) {
-                                    setSelectedBlocks(selectedBlocks.filter((b) => b !== blk));
+                                    setNmmsSelectedBlocks(nmmsSelectedBlocks.filter((b) => b !== blk));
                                   } else {
-                                    setSelectedBlocks([...selectedBlocks, blk]);
+                                    setNmmsSelectedBlocks([...nmmsSelectedBlocks, blk]);
                                   }
                                 }}
                                 className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
                                   isSelected
-                                    ? "bg-emerald-50 border-emerald-600 text-emerald-900"
+                                    ? "bg-[hsl(213,45%,94%)] border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)]"
                                     : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                                 }`}
                               >
@@ -1304,16 +2347,53 @@ export default function AdminDashboardClient({
                       )}
                     </div>
 
-                    <p className="text-xs text-gray-500 pt-1">
-                      {selectedCategories.length === 0 && selectedSchoolTypes.length === 0 && selectedBlocks.length === 0
-                        ? "No filters selected. Session will be visible to ALL active teachers."
-                        : `Targeting: ${selectedCategories.length > 0 ? `${selectedCategories.length} Category Type(s)` : "All Categories"} AND ${selectedSchoolTypes.length > 0 ? `${selectedSchoolTypes.length} School Type(s)` : "All School Types"} AND ${selectedBlocks.length > 0 ? `${selectedBlocks.length} Block(s)` : "All Blocks"}.`}
-                    </p>
+                    <div className="space-y-2 pt-3 border-t border-gray-100">
+                      <label className="text-sm font-semibold text-gray-700">4. Target BRTEs (Block Resource Teacher Educators)</label>
+                      <div
+                        onClick={() => setNmmsIncludeBrte(!nmmsIncludeBrte)}
+                        className={`p-3.5 rounded-lg border cursor-pointer transition-all flex items-start gap-3 ${
+                          nmmsIncludeBrte
+                            ? "bg-amber-50/90 border-amber-500 text-amber-950 ring-1 ring-amber-500/20"
+                            : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 ${nmmsIncludeBrte ? "border-amber-600 bg-amber-600 text-white" : "border-gray-300 bg-white"}`}>
+                          {nmmsIncludeBrte && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-bold flex items-center gap-2">
+                            <span>Add all BRTEs to this NMMS Session</span>
+                            {nmmsIncludeBrte && (
+                              <Badge className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0 border-amber-300">
+                                Enabled
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 leading-relaxed">
+                            When enabled, all BRTEs will receive this NMMS Google Meet link on their BRTE dashboard to join and record attendance.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-gray-500 pt-1 space-y-1">
+                      <p>
+                        {nmmsSelectedCategories.length === 0 && nmmsSelectedSchoolTypes.length === 0 && nmmsSelectedBlocks.length === 0
+                          ? "Schools: No filters selected. Session will be visible to ALL active schools."
+                          : `Schools Targeting: ${nmmsSelectedCategories.length > 0 ? `${nmmsSelectedCategories.length} Category Type(s)` : "All Categories"} AND ${nmmsSelectedSchoolTypes.length > 0 ? `${nmmsSelectedSchoolTypes.length} School Type(s)` : "All School Types"} AND ${nmmsSelectedBlocks.length > 0 ? `${nmmsSelectedBlocks.length} Block(s)` : "All Blocks"}.`}
+                      </p>
+                      {nmmsIncludeBrte && (
+                        <p className="text-amber-800 font-semibold flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
+                          BRTEs: All BRTEs are included and will receive the Google Meet link.
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="pt-2">
                     <Button type="submit" className="w-full" disabled={isPending}>
-                      {isPending ? "Creating..." : "Save Session"}
+                      {isPending ? "Creating..." : "Save NMMS Session"}
                     </Button>
                   </div>
                 </form>
@@ -1334,7 +2414,7 @@ export default function AdminDashboardClient({
                 <Button
                   onClick={handleExportConsolidatedBrteAttendance}
                   disabled={isExportingConsolidatedBrte || brteSessions.length === 0}
-                  className="bg-purple-700 hover:bg-purple-800 text-white font-bold gap-2 text-xs h-9 shadow-xs"
+                  className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white font-bold gap-2 text-xs h-9 shadow-xs"
                 >
                   {isExportingConsolidatedBrte ? (
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1454,7 +2534,7 @@ export default function AdminDashboardClient({
         {activeTab === "new-brte-session" && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fade-up">
             <Card>
-              <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+              <CardHeader className="border-b border-gray-200 bg-gray-50/80">
                 <CardTitle>Schedule BRTE Session</CardTitle>
                 <CardDescription>
                   Create a new training session exclusively for BRTEs with optional block targeting.
@@ -1675,9 +2755,9 @@ export default function AdminDashboardClient({
       {isAddSchoolOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md shadow-2xl border-0">
-            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-lg">Add School</CardTitle>
-              <button onClick={() => setIsAddSchoolOpen(false)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            <CardHeader className="border-b border-gray-200 bg-[hsl(213,56%,24%)] text-white flex flex-row items-center justify-between py-4 rounded-t-lg">
+              <CardTitle className="text-lg text-white">Add School</CardTitle>
+              <button onClick={() => setIsAddSchoolOpen(false)} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleAddSchool} className="space-y-4 text-sm">
@@ -1727,9 +2807,9 @@ export default function AdminDashboardClient({
       {editingSchool && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md shadow-2xl border-0">
-            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4">
-              <CardTitle className="text-lg">Edit School</CardTitle>
-              <button onClick={() => setEditingSchool(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            <CardHeader className="border-b border-gray-200 bg-[hsl(213,56%,24%)] text-white flex flex-row items-center justify-between py-4 rounded-t-lg">
+              <CardTitle className="text-lg text-white">Edit School</CardTitle>
+              <button onClick={() => setEditingSchool(null)} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleUpdateSchool} className="space-y-4 text-sm">
@@ -1771,16 +2851,73 @@ export default function AdminDashboardClient({
         </div>
       )}
 
-      {/* EDIT TEACHERS SESSION MODAL */}
+      {/* EDIT SESSION MODAL (HM / NMMS) */}
       {editingSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] shadow-2xl border-0 flex flex-col overflow-hidden">
-            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4 shrink-0">
-              <CardTitle className="text-lg">Edit Teachers Session</CardTitle>
-              <button onClick={() => setEditingSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            <CardHeader className="border-b border-gray-200 bg-[hsl(213,56%,24%)] text-white flex flex-row items-center justify-between py-4 shrink-0 rounded-t-lg">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg text-white">
+                  Edit {editingSession.sessionType === "HM" ? "HM" : "NMMS"} Session
+                </CardTitle>
+                <Badge
+                  variant="outline"
+                  className={
+                    editingSession.sessionType === "HM"
+                      ? "bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-semibold"
+                      : "bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold"
+                  }
+                >
+                  {editingSession.sessionType === "HM" ? "HM Session" : "NMMS Session"}
+                </Badge>
+              </div>
+              <button onClick={() => setEditingSession(null)} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
             </CardHeader>
             <CardContent className="overflow-y-auto flex-1 pt-5 pb-2">
               <form id="edit-session-form" onSubmit={handleUpdateSession} className="space-y-4 text-sm">
+                {/* Session Type */}
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-gray-700">Session Type <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      onClick={() => setEditingSession({ ...editingSession, sessionType: "HM" })}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                        editingSession.sessionType === "HM"
+                          ? "bg-indigo-50 border-indigo-600 text-indigo-950 font-semibold shadow-xs"
+                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        editingSession.sessionType === "HM" ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white"
+                      }`}>
+                        {editingSession.sessionType === "HM" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-indigo-950">HM Session</div>
+                        <div className="text-[11px] text-gray-500 font-normal">Headmasters meeting</div>
+                      </div>
+                    </div>
+                    <div
+                      onClick={() => setEditingSession({ ...editingSession, sessionType: "NMMS" })}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
+                        editingSession.sessionType !== "HM"
+                          ? "bg-blue-50 border-blue-600 text-blue-950 font-semibold shadow-xs"
+                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        editingSession.sessionType !== "HM" ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300 bg-white"
+                      }`}>
+                        {editingSession.sessionType !== "HM" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-blue-950">NMMS Session</div>
+                        <div className="text-[11px] text-gray-500 font-normal">Teachers training meet</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Title */}
                 <div className="space-y-1.5">
                   <label className="font-semibold text-gray-700">Session Title <span className="text-red-500">*</span></label>
@@ -1919,10 +3056,54 @@ export default function AdminDashboardClient({
                     </div>
                   )}
 
+                  {/* BRTEs for NMMS sessions */}
+                  {editingSession.sessionType !== "HM" && (
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <label className="text-xs font-semibold text-gray-700">4. Target BRTEs</label>
+                      <div
+                        onClick={() =>
+                          setEditingSession({
+                            ...editingSession,
+                            includeBrte: !editingSession.includeBrte,
+                          })
+                        }
+                        className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-start gap-2.5 ${
+                          editingSession.includeBrte
+                            ? "bg-amber-50/90 border-amber-500 text-amber-950 ring-1 ring-amber-500/20"
+                            : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
+                            editingSession.includeBrte
+                              ? "border-amber-600 bg-amber-600 text-white"
+                              : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {editingSession.includeBrte && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-semibold flex items-center gap-1.5">
+                            <span>Add all BRTEs to this NMMS Session</span>
+                            {editingSession.includeBrte && (
+                              <Badge className="bg-amber-100 text-amber-800 text-[9px] px-1 py-0 border-amber-300">
+                                Enabled
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-gray-500 leading-tight">
+                            All BRTEs will receive the Google Meet link on their portal and can record attendance.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <p className="text-xs text-gray-500 pt-1">
                     {(!editingSession.categoryTypes?.length && !editingSession.schoolTypes?.length && !editingSession.blocks?.length)
-                      ? "No filters selected — session visible to ALL active teachers."
+                      ? "No school filters selected — session visible to ALL active teachers."
                       : `Targeting: ${editingSession.categoryTypes?.length ? `${editingSession.categoryTypes.length} Category Type(s)` : "All Categories"} AND ${editingSession.schoolTypes?.length ? `${editingSession.schoolTypes.length} School Type(s)` : "All School Types"} AND ${editingSession.blocks?.length ? `${editingSession.blocks.length} Block(s)` : "All Blocks"}.`}
+                    {editingSession.includeBrte && " (All BRTEs Included)"}
                   </p>
                 </div>
               </form>
@@ -1940,9 +3121,9 @@ export default function AdminDashboardClient({
       {editingBrteSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] shadow-2xl border-0 flex flex-col overflow-hidden">
-            <CardHeader className="border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between py-4 shrink-0">
-              <CardTitle className="text-lg">Edit BRTE Session</CardTitle>
-              <button onClick={() => setEditingBrteSession(null)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            <CardHeader className="border-b border-gray-200 bg-[hsl(213,56%,24%)] text-white flex flex-row items-center justify-between py-4 shrink-0 rounded-t-lg">
+              <CardTitle className="text-lg text-white">Edit BRTE Session</CardTitle>
+              <button onClick={() => setEditingBrteSession(null)} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
             </CardHeader>
             <CardContent className="overflow-y-auto flex-1 pt-5 pb-2">
               <form id="edit-brte-session-form" onSubmit={handleUpdateBrteSession} className="space-y-4 text-sm">
@@ -2032,13 +3213,13 @@ export default function AdminDashboardClient({
       {isExportSchoolsMatrixOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] shadow-2xl border-0 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/30 flex flex-row items-center justify-between py-4 px-6 shrink-0">
+            <CardHeader className="border-b border-gray-200 bg-[hsl(213,56%,24%)] text-white flex flex-row items-center justify-between py-4 px-6 shrink-0 rounded-t-lg">
               <div>
-                <CardTitle className="text-lg text-emerald-950 flex items-center gap-2">
-                  <Download className="w-5 h-5 text-emerald-600" /> Export Master Schools Matrix
+                <CardTitle className="text-lg text-white flex items-center gap-2">
+                  <Download className="w-5 h-5 text-[hsl(40,80%,50%)]" /> Export Master Schools Matrix ({exportMatrixSessionType} Sessions)
                 </CardTitle>
-                <CardDescription className="text-xs text-emerald-800/80 mt-0.5">
-                  Filter by Category Types, School Types, and Blocks before exporting.
+                <CardDescription className="text-xs text-white/70 mt-0.5">
+                  Filter by Category Types, School Types, and Blocks before exporting {exportMatrixSessionType} session matrix.
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -2051,13 +3232,13 @@ export default function AdminDashboardClient({
                     setExportFilterSchoolTypes([...availableSchoolTypes]);
                     setExportFilterBlocks([...availableBlocks]);
                   }}
-                  className="h-8 text-xs font-semibold border-emerald-300 text-emerald-800 hover:bg-emerald-100/50 bg-white"
+                  className="h-8 text-xs font-semibold border-white/30 text-white hover:bg-white/10 bg-transparent"
                 >
                   Select All Filters
                 </Button>
                 <button
                   onClick={() => setIsExportSchoolsMatrixOpen(false)}
-                  className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -2076,7 +3257,7 @@ export default function AdminDashboardClient({
                   <button
                     type="button"
                     onClick={() => setExportFilterCategories(CATEGORY_TYPE_OPTIONS.map((c) => c.id))}
-                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                    className="text-[11px] font-semibold text-[hsl(213,56%,24%)] hover:underline"
                   >
                     Select All
                   </button>
@@ -2096,13 +3277,13 @@ export default function AdminDashboardClient({
                         }}
                         className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
                           isSelected
-                            ? "bg-emerald-50 border-emerald-600 text-emerald-950 shadow-xs"
+                            ? "bg-[hsl(213,45%,94%)] border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)] shadow-xs"
                             : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                         }`}
                       >
                         <div
                           className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
-                            isSelected ? "border-emerald-600 bg-emerald-600 text-white" : "border-gray-300 bg-white"
+                            isSelected ? "border-[hsl(213,56%,24%)] bg-[hsl(213,56%,24%)] text-white" : "border-gray-300 bg-white"
                           }`}
                         >
                           {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -2126,7 +3307,7 @@ export default function AdminDashboardClient({
                   <button
                     type="button"
                     onClick={() => setExportFilterSchoolTypes([...availableSchoolTypes])}
-                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                    className="text-[11px] font-semibold text-[hsl(213,56%,24%)] hover:underline"
                   >
                     Select All
                   </button>
@@ -2149,13 +3330,13 @@ export default function AdminDashboardClient({
                           }}
                           className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2.5 ${
                             isSelected
-                              ? "bg-purple-50 border-purple-600 text-purple-950 shadow-xs"
+                              ? "bg-[hsl(213,45%,94%)] border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)] shadow-xs"
                               : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                           }`}
                         >
                           <div
                             className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
-                              isSelected ? "border-purple-600 bg-purple-600 text-white" : "border-gray-300 bg-white"
+                              isSelected ? "border-[hsl(213,56%,24%)] bg-[hsl(213,56%,24%)] text-white" : "border-gray-300 bg-white"
                             }`}
                           >
                             {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -2180,7 +3361,7 @@ export default function AdminDashboardClient({
                   <button
                     type="button"
                     onClick={() => setExportFilterBlocks([...availableBlocks])}
-                    className="text-[11px] font-semibold text-emerald-700 hover:underline"
+                    className="text-[11px] font-semibold text-[hsl(213,56%,24%)] hover:underline"
                   >
                     Select All
                   </button>
@@ -2203,13 +3384,13 @@ export default function AdminDashboardClient({
                           }}
                           className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center gap-2 ${
                             isSelected
-                              ? "bg-amber-50 border-amber-600 text-amber-950 shadow-xs"
+                              ? "bg-[hsl(213,45%,94%)] border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)] shadow-xs"
                               : "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                           }`}
                         >
                           <div
                             className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
-                              isSelected ? "border-amber-600 bg-amber-600 text-white" : "border-gray-300 bg-white"
+                              isSelected ? "border-[hsl(213,56%,24%)] bg-[hsl(213,56%,24%)] text-white" : "border-gray-300 bg-white"
                             }`}
                           >
                             {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -2224,13 +3405,13 @@ export default function AdminDashboardClient({
 
               {/* VALIDATION & INTERSECTION STATUS */}
               {(exportFilterCategories.length + exportFilterSchoolTypes.length + exportFilterBlocks.length === 0) ? (
-                <div className="rounded-lg bg-blue-50/80 border border-blue-200 p-3 text-xs text-blue-900 flex items-center gap-2">
+                <div className="rounded-lg bg-[hsl(213,45%,94%)] border border-[hsl(213,45%,85%)] p-3 text-xs text-[hsl(213,56%,24%)] flex items-center gap-2">
                   <span>ℹ️ Select any option(s) to filter by strict intersection, or click <strong>&quot;Select All Filters&quot;</strong> to export all schools.</span>
                 </div>
               ) : (
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                  <span className="font-semibold text-emerald-900">Strict Intersection (AND):</span>
-                  <span className="font-medium text-emerald-800">
+                <div className="rounded-lg bg-[hsl(213,45%,94%)] border border-[hsl(213,45%,85%)] p-3 text-xs text-[hsl(213,56%,24%)] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <span className="font-semibold text-[hsl(213,56%,24%)]">Strict Intersection (AND):</span>
+                  <span className="font-medium text-[hsl(213,56%,30%)]">
                     {[
                       exportFilterCategories.length > 0 ? `${exportFilterCategories.length} Category Type(s)` : null,
                       exportFilterSchoolTypes.length > 0 ? `${exportFilterSchoolTypes.length} School Type(s)` : null,
@@ -2256,14 +3437,14 @@ export default function AdminDashboardClient({
                   isExportingConsolidated ||
                   exportFilterCategories.length + exportFilterSchoolTypes.length + exportFilterBlocks.length === 0
                 }
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2 shadow-xs"
+                className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white font-semibold gap-2 shadow-xs"
               >
                 {isExportingConsolidated ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
                   <Download className="w-4 h-4" />
                 )}
-                Download Matrix (.xlsx)
+                Download {exportMatrixSessionType} Matrix (.xlsx)
               </Button>
             </div>
           </Card>

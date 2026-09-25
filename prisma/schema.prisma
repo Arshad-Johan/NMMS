@@ -90,6 +90,7 @@ model HeadOfSchool {
 
 model Session {
   id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionType       String                @default("NMMS") @map("session_type") @db.VarChar(20)
   title             String                @db.VarChar(255)
   description       String?
   sessionDate       DateTime              @map("session_date") @db.Date
@@ -102,6 +103,7 @@ model Session {
   attendanceCloseAt DateTime?             @map("attendance_close_at") @db.Timestamptz(6)
   isAttendanceOpen  Boolean               @default(false) @map("is_attendance_open")
   isPublished       Boolean               @default(false) @map("is_published")
+  includeBrte       Boolean               @default(false) @map("include_brte")
   createdByAdminId  String                @map("created_by_admin_id") @db.Uuid
   createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -110,10 +112,12 @@ model Session {
   categoryRules     SessionCategoryRule[]
   schoolTypeRules   SessionSchoolTypeRule[]
   blockRules        SessionBlockRule[]
+  sessionBrteAttendance SessionBrteAttendance[]
   createdByAdmin    User                  @relation(fields: [createdByAdminId], references: [id], onUpdate: NoAction, map: "sessions_created_by_admin_id_users_id_fk")
 
   @@index([sessionDate], map: "sessions_date_idx")
   @@index([isPublished], map: "sessions_published_idx")
+  @@index([sessionType], map: "sessions_type_idx")
   @@map("sessions")
 }
 
@@ -242,6 +246,7 @@ model Brte {
   createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   attendance BrteAttendance[]
+  sessionAttendance SessionBrteAttendance[]
 
   @@index([emis])
   @@index([block])
@@ -294,3 +299,19 @@ model BrteAttendance {
   @@index([brteId])
   @@map("brte_attendance")
 }
+
+model SessionBrteAttendance {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String           @map("session_id") @db.Uuid
+  brteId    String           @map("brte_id") @db.Uuid
+  status    AttendanceStatus @default(present)
+  markedAt  DateTime?        @map("marked_at") @db.Timestamptz(6)
+  session   Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_brte_attendance_session_id_fk")
+  brte      Brte             @relation(fields: [brteId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_brte_attendance_brte_id_fk")
+
+  @@unique([sessionId, brteId], map: "session_brte_attendance_session_brte_idx")
+  @@index([sessionId])
+  @@index([brteId])
+  @@map("session_brte_attendance")
+}
+

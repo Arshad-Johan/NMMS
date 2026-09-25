@@ -17,6 +17,8 @@ export interface CreateSessionInput {
   categoryTypes: CategoryType[];
   schoolTypes?: string[];
   blocks?: string[];
+  sessionType?: "HM" | "NMMS";
+  includeBrte?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +234,7 @@ export async function createSessionAction(
 
     const createdSession = await prisma.session.create({
       data: {
+        sessionType: input.sessionType || "NMMS",
         title: input.title,
         description: input.description ?? null,
         sessionDate,
@@ -250,6 +253,7 @@ export async function createSessionAction(
         blockRules: {
           create: (input.blocks || []).map((block) => ({ block })),
         },
+        includeBrte: Boolean(input.includeBrte),
       },
       include: {
         categoryRules: true,
@@ -286,6 +290,8 @@ export interface UpdateSessionInput {
   categoryTypes?: CategoryType[];
   schoolTypes?: string[];
   blocks?: string[];
+  sessionType?: "HM" | "NMMS";
+  includeBrte?: boolean;
 }
 
 export async function updateSessionAction(
@@ -346,6 +352,7 @@ export async function updateSessionAction(
       return await tx.session.update({
         where: { id: sessionId },
         data: {
+          ...(data.sessionType !== undefined && { sessionType: data.sessionType }),
           ...(data.title !== undefined && { title: data.title }),
           ...(data.description !== undefined && { description: data.description }),
           ...(sessionDate !== undefined && { sessionDate }),
@@ -354,6 +361,7 @@ export async function updateSessionAction(
           ...(data.generalMeetUrl !== undefined && { generalMeetUrl: data.generalMeetUrl }),
           ...(data.isAttendanceOpen !== undefined && { isAttendanceOpen: data.isAttendanceOpen }),
           ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
+          ...(data.includeBrte !== undefined && { includeBrte: data.includeBrte }),
         },
         include: {
           categoryRules: true,
@@ -549,6 +557,71 @@ export async function exportAttendanceExcelAction(
       statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: isPresent ? "FFC6EFCE" : "FFFFC7CE" } };
       statusCell.font = { color: { argb: isPresent ? "FF006100" : "FF9C0006" }, bold: true };
     });
+
+    if (targetSession.includeBrte) {
+      const allBrtes = await prisma.brte.findMany({
+        where: { isActive: true },
+        include: {
+          sessionAttendance: {
+            where: { sessionId },
+            select: { status: true, markedAt: true },
+          },
+        },
+        orderBy: [{ block: "asc" }, { name: "asc" }],
+      });
+
+      const brteSheet = workbook.addWorksheet("BRTE Attendance", {
+        properties: { tabColor: { argb: "FFFFC000" } },
+      });
+
+      brteSheet.columns = [
+        { header: "S.No", key: "sno", width: 8 },
+        { header: "EMIS ID", key: "emis", width: 14 },
+        { header: "BRTE Name", key: "name", width: 28 },
+        { header: "Block", key: "block", width: 20 },
+        { header: "Attendance Status", key: "status", width: 20 },
+        { header: "Marked Time", key: "markedAt", width: 20 },
+      ];
+
+      const brteHeaderRow = brteSheet.getRow(1);
+      brteHeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      brteHeaderRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1B365D" },
+      };
+      brteHeaderRow.alignment = { vertical: "middle", horizontal: "center" };
+
+      allBrtes.forEach((b, idx) => {
+        const att = b.sessionAttendance[0];
+        const isPresent = att?.status === "present";
+        const row = brteSheet.addRow({
+          sno: idx + 1,
+          emis: b.emis,
+          name: b.name,
+          block: b.block || "N/A",
+          status: isPresent ? "PRESENT" : "ABSENT",
+          markedAt: att?.markedAt
+            ? new Date(att.markedAt).toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+                timeZone: "Asia/Kolkata",
+              })
+            : "—",
+        });
+        const statusCell = row.getCell("status");
+        statusCell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: isPresent ? "FFC6EFCE" : "FFFFC7CE" },
+        };
+        statusCell.font = {
+          color: { argb: isPresent ? "FF006100" : "FF9C0006" },
+          bold: true,
+        };
+      });
+    }
     
     const buffer = await workbook.xlsx.writeBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
@@ -574,6 +647,8 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
   categoryTypes?: CategoryType[];
   schoolTypes?: string[];
   blocks?: string[];
+  sessionType?: "HM" | "NMMS";
+  sessionIds?: string[];
 }): Promise<{
   base64?: string;
   filename?: string;
@@ -584,7 +659,16 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
   if (!session || session.role !== "admin") return { error: "Unauthorized." };
 
   try {
+    const sessionWhere: any = {};
+    if (filters?.sessionType) {
+      sessionWhere.sessionType = filters.sessionType;
+    }
+    if (filters?.sessionIds && filters.sessionIds.length > 0) {
+      sessionWhere.id = { in: filters.sessionIds };
+    }
+
     const allSessions = await prisma.session.findMany({
+      where: sessionWhere,
       include: {
         categoryRules: true,
         schoolTypeRules: true,
@@ -594,7 +678,7 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
     });
 
     if (allSessions.length === 0) {
-      return { error: "No teachers training sessions found to export." };
+      return { error: `No ${filters?.sessionType ?? ""} training sessions found to export.` };
     }
 
     const schoolFilter: any = { isActive: true };
@@ -790,7 +874,8 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
     const filterSuffix = filters?.schoolTypes && filters.schoolTypes.length > 0 
       ? `_${filters.schoolTypes.map((s: string) => s.replace(/[^a-zA-Z0-9]/g, "")).join("-")}`
       : "";
-    const filename = `CEO_Madurai_NMMS_Master_Schools_Attendance_Matrix${filterSuffix}_${dateStamp}.xlsx`;
+    const typePrefix = filters?.sessionType ? `${filters.sessionType}_` : "";
+    const filename = `CEO_Madurai_${typePrefix}Master_Schools_Attendance_Matrix${filterSuffix}_${dateStamp}.xlsx`;
 
     return {
       base64,
@@ -1120,7 +1205,9 @@ export async function exportBrteAttendanceExcelAction(
 // 6B. EXPORT CONSOLIDATED BRTE SESSIONS ATTENDANCE MATRIX
 // ---------------------------------------------------------------------------
 
-export async function exportConsolidatedBrteAttendanceExcelAction(): Promise<{
+export async function exportConsolidatedBrteAttendanceExcelAction(filters?: {
+  sessionIds?: string[];
+}): Promise<{
   base64?: string;
   filename?: string;
   count?: number;
@@ -1130,7 +1217,13 @@ export async function exportConsolidatedBrteAttendanceExcelAction(): Promise<{
   if (!session || session.role !== "admin") return { error: "Unauthorized." };
 
   try {
+    const brteSessionWhere: any = {};
+    if (filters?.sessionIds && filters.sessionIds.length > 0) {
+      brteSessionWhere.id = { in: filters.sessionIds };
+    }
+
     const allBrteSessions = await prisma.brteSession.findMany({
+      where: brteSessionWhere,
       include: { blockRules: true },
       orderBy: { sessionDate: "asc" },
     });

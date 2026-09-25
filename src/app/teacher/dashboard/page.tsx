@@ -81,6 +81,7 @@ export default async function TeacherDashboard() {
     const userAttendance = s.attendance[0] ?? null;
     return {
       id: s.id,
+      sessionType: s.sessionType,
       title: s.title,
       description: s.description,
       sessionDate: s.sessionDate.toISOString(),

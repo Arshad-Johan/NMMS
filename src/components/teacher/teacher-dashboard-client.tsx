@@ -60,6 +60,7 @@ interface TeacherDashboardClientProps {
   };
   assignedSessions: Array<{
     id: string;
+    sessionType?: string;
     title: string;
     description: string | null;
     sessionDate: string;
@@ -226,19 +227,20 @@ export default function TeacherDashboardClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
+    <div className="min-h-screen bg-[hsl(220,14%,96%)] text-gray-900 font-sans flex flex-col">
       {/* ── Header Navbar ── */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-40 bg-[hsl(213,56%,24%)] shadow-md">
+        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[hsl(40,80%,50%)]" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded bg-[hsl(213,56%,24%)] flex items-center justify-center text-white shrink-0 shadow-sm">
+            <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center text-white shrink-0">
               <Landmark className="w-5 h-5" />
             </div>
             <div className="truncate">
-              <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-tight truncate">
+              <span className="font-extrabold text-base tracking-tight text-white block leading-tight truncate">
                 CEO - Madurai
               </span>
-              <span className="text-xs font-bold text-black uppercase tracking-wider block truncate">
+              <span className="text-[10px] font-bold text-[hsl(40,80%,50%)] uppercase tracking-wider block truncate">
                 Gmeet Attendance Portal
               </span>
             </div>
@@ -246,14 +248,14 @@ export default function TeacherDashboardClient({
 
           <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9">
+              <Avatar className="h-9 w-9 ring-white/30">
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <div className="hidden sm:block text-left">
-                <div className="text-sm font-semibold text-gray-900 leading-tight">
+                <div className="text-sm font-semibold text-white leading-tight">
                   {teacher.name ?? "Teacher"}
                 </div>
-                <div className="text-xs text-gray-500 font-medium">
+                <div className="text-xs text-white/70 font-medium">
                   UDISE: {teacher.schoolUdise}
                 </div>
               </div>
@@ -264,7 +266,7 @@ export default function TeacherDashboardClient({
                 variant="outline"
                 size="sm"
                 type="submit"
-                className="gap-2 text-xs h-9 text-gray-600 font-semibold"
+                className="gap-2 text-xs h-9 border-white/20 text-white/80 hover:bg-white/10 hover:text-white bg-transparent font-semibold"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sign Out</span>
@@ -277,10 +279,10 @@ export default function TeacherDashboardClient({
       {/* ── Main Content Area ── */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Welcome Hero Banner */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-[hsl(213,56%,24%)] p-6 sm:p-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-bold text-black uppercase tracking-wide">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-[hsl(213,56%,24%)] uppercase tracking-wider">
                 CEO - Madurai | Gmeet Attendance Portal
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
@@ -300,7 +302,7 @@ export default function TeacherDashboardClient({
 
             <div className="flex flex-wrap gap-2 pt-2 md:pt-0">
               {teacher.school.categoryType && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 w-fit">
+                <Badge variant="outline" className="bg-[hsl(213,45%,94%)] text-[hsl(213,56%,30%)] border-[hsl(213,45%,85%)] w-fit">
                   {teacher.school.categoryType.replace("_", " ")}
                 </Badge>
               )}
@@ -324,14 +326,14 @@ export default function TeacherDashboardClient({
           <Card>
             <CardContent className="p-4 sm:p-5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">
                   Total Sessions
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {totalEvaluatedSessions}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-blue-50 text-blue-600 shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,45%,94%)] text-[hsl(213,56%,24%)] shrink-0">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
@@ -340,14 +342,14 @@ export default function TeacherDashboardClient({
           <Card>
             <CardContent className="p-4 sm:p-5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">
                   Attended
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {presentCount}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-emerald-50 text-emerald-700 shrink-0">
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
@@ -356,14 +358,14 @@ export default function TeacherDashboardClient({
           <Card>
             <CardContent className="p-4 sm:p-5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">
                   Missed
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {missedCount}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600 shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-700 shrink-0">
                 <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
@@ -372,14 +374,14 @@ export default function TeacherDashboardClient({
           <Card>
             <CardContent className="p-4 sm:p-5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">
                   Rate
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {attendanceRate !== null ? `${attendanceRate}%` : "—"}
                 </p>
               </div>
-              <div className="p-2 sm:p-3 rounded-lg bg-[hsl(213,56%,24%)]/10 text-[hsl(213,56%,24%)] shrink-0">
+              <div className="p-2 sm:p-3 rounded-lg bg-[hsl(40,70%,95%)] text-[hsl(40,80%,40%)] shrink-0">
                 <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </CardContent>
@@ -387,8 +389,8 @@ export default function TeacherDashboardClient({
         </div>
 
         {/* ── SCHEDULED NMMS TRAINING SESSIONS SECTION ── */}
-        <Card className="border-[hsl(213,56%,24%)]/20 shadow-md">
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100 flex flex-row items-center justify-between py-5">
+        <Card className="border-t-2 border-t-[hsl(40,80%,50%)] shadow-sm">
+          <CardHeader className="bg-gray-50/80 border-b border-gray-200 flex flex-row items-center justify-between py-5">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Video className="w-5 h-5 text-[hsl(213,56%,24%)]" />
@@ -428,7 +430,14 @@ export default function TeacherDashboardClient({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm leading-snug">{sessionItem.title}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-semibold text-gray-900 text-sm leading-snug">{sessionItem.title}</p>
+                              {sessionItem.sessionType === "HM" ? (
+                                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-bold py-0 h-4">HM Meet</Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-[hsl(213,45%,94%)] text-[hsl(213,56%,30%)] border-[hsl(213,45%,85%)] text-[10px] font-bold py-0 h-4">NMMS</Badge>
+                              )}
+                            </div>
                             {sessionItem.description && (
                               <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{sessionItem.description}</p>
                             )}
@@ -443,7 +452,7 @@ export default function TeacherDashboardClient({
                                 <XCircle className="w-3 h-3" /> Absent
                               </Badge>
                             ) : (
-                              <Badge className="gap-1 text-xs bg-amber-100 text-amber-800 hover:bg-amber-100 border-transparent">
+                              <Badge variant="warning" className="gap-1 text-xs">
                                 <Clock className="w-3 h-3" /> Pending
                               </Badge>
                             )}
@@ -508,7 +517,14 @@ export default function TeacherDashboardClient({
                         return (
                           <TableRow key={sessionItem.id} className={isPresent ? "bg-emerald-50/30" : ""}>
                             <TableCell className="max-w-[280px]">
-                              <div className="font-bold text-gray-900">{sessionItem.title}</div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <div className="font-bold text-gray-900">{sessionItem.title}</div>
+                                {sessionItem.sessionType === "HM" ? (
+                                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-bold py-0 h-4">HM Meet</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-[hsl(213,45%,94%)] text-[hsl(213,56%,30%)] border-[hsl(213,45%,85%)] text-[10px] font-bold py-0 h-4">NMMS</Badge>
+                                )}
+                              </div>
                               {sessionItem.description && (
                                 <div className="text-sm text-gray-500 mt-0.5 line-clamp-1">{sessionItem.description}</div>
                               )}
@@ -535,7 +551,7 @@ export default function TeacherDashboardClient({
                                   <XCircle className="w-3.5 h-3.5" /> Absent
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="gap-1.5 bg-amber-100 text-amber-800 hover:bg-amber-100">
+                                <Badge variant="warning" className="gap-1.5">
                                   <Clock className="w-3.5 h-3.5" /> Pending
                                 </Badge>
                               )}
@@ -569,7 +585,7 @@ export default function TeacherDashboardClient({
 
         {/* Recent Attendance History */}
         <Card>
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-5">
+          <CardHeader className="bg-gray-50/80 border-b border-gray-200 py-5">
             <CardTitle className="flex items-center gap-2 text-base">
               <History className="w-5 h-5 text-gray-500" /> Attendance History
             </CardTitle>
@@ -626,12 +642,12 @@ export default function TeacherDashboardClient({
                       {combinedHistory.map((a) => (
                         <TableRow key={a.id}>
                           <TableCell className="font-semibold text-gray-900">{a.title}</TableCell>
-                          <TableCell className="font-medium text-gray-600">
+                          <TableCell className="font-medium text-gray-700">
                             {new Date(a.sessionDate).toLocaleDateString("en-IN", {
                               day: "2-digit", month: "short", year: "numeric",
                             })}
                           </TableCell>
-                          <TableCell className="font-mono text-sm text-gray-500">
+                          <TableCell className="font-mono text-sm text-gray-600">
                             {a.markedAt
                               ? new Date(a.markedAt).toLocaleTimeString("en-IN", {
                                   hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata",

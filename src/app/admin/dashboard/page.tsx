@@ -11,6 +11,8 @@ export default async function AdminDashboardPage() {
   const [
     totalSchools,
     totalSessions,
+    totalHmSessions,
+    totalNmmsSessions,
     totalBrteSessions,
     totalAttendance,
     presentAttendance,
@@ -24,6 +26,8 @@ export default async function AdminDashboardPage() {
   ] = await Promise.all([
     prisma.school.count(),
     prisma.session.count(),
+    prisma.session.count({ where: { sessionType: "HM" } }),
+    prisma.session.count({ where: { sessionType: "NMMS" } }),
     prisma.brteSession.count(),
     prisma.attendance.count(),
     prisma.attendance.count({ where: { status: "present" } }),
@@ -100,6 +104,8 @@ export default async function AdminDashboardPage() {
       stats={{
         totalSchools,
         totalSessions,
+        totalHmSessions,
+        totalNmmsSessions,
         totalBrteSessions,
         overallRate,
       }}
