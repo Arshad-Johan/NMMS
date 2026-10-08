@@ -195,7 +195,7 @@ export default function TeacherDashboardClient({
       ? Math.round((presentCount / totalEvaluatedSessions) * 100)
       : null;
 
-  function handleJoinAndMark(sessionId: string, generalMeetUrl: string, isExpired: boolean) {
+  function handleJoinAndMark(sessionId: string, generalMeetUrl: string, isExpired: boolean, isPresent?: boolean) {
     if (isExpired) {
       toast.error("This session schedule has ended and is expired.");
       return;
@@ -203,6 +203,12 @@ export default function TeacherDashboardClient({
 
     // 1. Open Google Meet link in new tab immediately
     window.open(generalMeetUrl, "_blank", "noopener,noreferrer");
+
+    // If attendance is already recorded as present, skip re-submitting attendance
+    if (isPresent) {
+      toast.success("Opening Google Meet...");
+      return;
+    }
 
     // 2. Mark attendance as present on server
     startTransition(async () => {
@@ -479,12 +485,23 @@ export default function TeacherDashboardClient({
                             <XCircle className="w-3.5 h-3.5" /> Session closed
                           </p>
                         ) : isPresent ? (
-                          <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Attendance recorded
-                          </p>
+                          <div className="flex flex-col gap-1.5">
+                            <Button
+                              onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired, true)}
+                              variant="outline"
+                              className="w-full h-10 gap-2 font-bold text-sm border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+                              disabled={isPending}
+                            >
+                              <Video className="w-4 h-4 text-emerald-700" />
+                              Rejoin Meeting
+                            </Button>
+                            <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Attendance recorded
+                            </p>
+                          </div>
                         ) : (
                           <Button
-                            onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired)}
+                            onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired, false)}
                             className="w-full h-10 gap-2 font-bold text-sm"
                             disabled={isPending}
                           >
@@ -561,9 +578,19 @@ export default function TeacherDashboardClient({
                                 <Badge variant="outline" className="text-gray-500 px-3 py-1.5">
                                   Closed
                                 </Badge>
+                              ) : isPresent ? (
+                                <Button
+                                  onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired, true)}
+                                  variant="outline"
+                                  className="h-9 gap-2 font-bold shadow-sm text-sm border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+                                  disabled={isPending}
+                                >
+                                  <Video className="w-4 h-4 text-emerald-700" />
+                                  Rejoin Meeting
+                                </Button>
                               ) : (
                                 <Button
-                                  onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired)}
+                                  onClick={() => handleJoinAndMark(sessionItem.id, sessionItem.generalMeetUrl, expired, false)}
                                   className="h-9 gap-2 font-bold shadow-sm text-sm"
                                   disabled={isPending}
                                 >
