@@ -50,6 +50,11 @@ interface TeacherDashboardClientProps {
       educationDistrict: string | null;
       categoryType: string | null;
       schoolType?: string | null;
+      headOfSchool?: {
+        name: string | null;
+        mobile: string | null;
+        hosType?: string | null;
+      } | null;
     };
   };
   stats: {
@@ -303,6 +308,14 @@ export default function TeacherDashboardClient({
                 <span className="font-mono text-gray-500">
                   UDISE: {teacher.schoolUdise}
                 </span>
+                {teacher.school.headOfSchool?.mobile && (
+                  <>
+                    <span className="text-gray-300 hidden sm:inline">|</span>
+                    <span className="text-gray-600 font-mono text-xs bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                      HM Phone: {teacher.school.headOfSchool.mobile}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 

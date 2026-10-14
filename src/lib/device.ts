@@ -10,7 +10,12 @@ const BRTE_DEVICE_COOKIE_NAME = "nmms_brte_device_lock";
 const MAX_AGE = 60 * 60 * 24;
 
 export async function checkAndSetDeviceLock(udise: string): Promise<{ allowed: boolean; error?: string }> {
-  const store = await cookies();
+  let store;
+  try {
+    store = await cookies();
+  } catch {
+    return { allowed: true };
+  }
   const existingCookie = store.get(DEVICE_COOKIE_NAME)?.value;
   
   if (existingCookie) {
@@ -48,7 +53,12 @@ export async function checkAndSetDeviceLock(udise: string): Promise<{ allowed: b
 }
 
 export async function checkAndSetBrteDeviceLock(emisId: string): Promise<{ allowed: boolean; error?: string }> {
-  const store = await cookies();
+  let store;
+  try {
+    store = await cookies();
+  } catch {
+    return { allowed: true };
+  }
   const existingCookie = store.get(BRTE_DEVICE_COOKIE_NAME)?.value;
 
   if (existingCookie) {

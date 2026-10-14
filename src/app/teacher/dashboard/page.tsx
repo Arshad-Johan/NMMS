@@ -18,12 +18,18 @@ export default async function TeacherDashboard() {
           educationDistrict: true,
           categoryType: true,
           schoolType: true,
+          headOfSchool: true,
         },
       },
     },
   });
 
   if (!teacher) redirect("/login");
+
+  // Enforce mandatory HM / Incharge registration
+  if (!teacher.school.headOfSchool?.name?.trim() || !teacher.school.headOfSchool?.mobile?.trim()) {
+    redirect("/login");
+  }
 
   const teacherId = teacher.id;
   const categoryType = teacher.school.categoryType;
