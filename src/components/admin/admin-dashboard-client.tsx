@@ -20,6 +20,7 @@ import {
   updateBrteSessionAction,
   deleteBrteSessionAction,
   exportBrteAttendanceExcelAction,
+  exportSchoolsHosDirectoryExcelAction,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,6 +202,7 @@ export default function AdminDashboardClient({
   const [isExportingConsolidated, setIsExportingConsolidated] = useState(false);
   const [isExportingConsolidatedBrte, setIsExportingConsolidatedBrte] = useState(false);
   const [isExportSchoolsMatrixOpen, setIsExportSchoolsMatrixOpen] = useState(false);
+  const [isExportingHosDirectory, setIsExportingHosDirectory] = useState(false);
   const [exportFilterCategories, setExportFilterCategories] = useState<CategoryType[]>([]);
   const [exportFilterSchoolTypes, setExportFilterSchoolTypes] = useState<string[]>([]);
   const [exportFilterBlocks, setExportFilterBlocks] = useState<string[]>([]);
@@ -690,6 +692,26 @@ export default function AdminDashboardClient({
     });
   }
 
+  function handleExportSchoolsHosDirectory() {
+    setIsExportingHosDirectory(true);
+    startTransition(async () => {
+      const res = await exportSchoolsHosDirectoryExcelAction();
+      if (res.error || !res.base64 || !res.filename) {
+        toast.error(`Export failed: ${res.error}`);
+        setIsExportingHosDirectory(false);
+      } else {
+        const link = document.createElement("a");
+        link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${res.base64}`;
+        link.download = res.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Exported HM / Incharge Directory for ${res.count} schools!`);
+        setIsExportingHosDirectory(false);
+      }
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // BRTE SESSION HANDLERS
   // ---------------------------------------------------------------------------
@@ -1072,6 +1094,19 @@ export default function AdminDashboardClient({
                     <Download className="w-3.5 h-3.5" />
                   )}
                   Export BRTE Matrix
+                </Button>
+                <Button
+                  onClick={handleExportSchoolsHosDirectory}
+                  disabled={isExportingHosDirectory}
+                  variant="outline"
+                  className="border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,95%)] font-bold gap-2 text-xs h-9 shadow-xs"
+                >
+                  {isExportingHosDirectory ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5" />
+                  )}
+                  Download HM Directory
                 </Button>
                 <Button onClick={() => setActiveTab("new-hm-session")} className="bg-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,30%)] text-white gap-2 text-xs h-9">
                   <Plus className="w-4 h-4" /> Schedule HM Session
@@ -2647,6 +2682,19 @@ export default function AdminDashboardClient({
                     className="pl-9 h-9"
                   />
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={handleExportSchoolsHosDirectory}
+                  disabled={isExportingHosDirectory}
+                  className="border-[hsl(213,56%,24%)] text-[hsl(213,56%,24%)] hover:bg-[hsl(213,56%,95%)] gap-2 h-9 font-medium"
+                >
+                  {isExportingHosDirectory ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Download HM Directory (.xlsx)
+                </Button>
                 <Button onClick={() => setIsAddSchoolOpen(true)} className="gap-2 h-9">
                   <Building2 className="w-4 h-4" /> Add School
                 </Button>
@@ -2665,6 +2713,13 @@ export default function AdminDashboardClient({
                         <div className="min-w-0">
                           <p className="font-semibold text-gray-900 text-sm truncate">{sc.name}</p>
                           <p className="text-xs font-mono text-[hsl(213,56%,24%)] mt-0.5">{sc.udise}</p>
+                          {sc.headOfSchool?.name ? (
+                            <p className="text-xs text-gray-700 mt-0.5">
+                              HM: <span className="font-medium text-gray-900">{sc.headOfSchool.name}</span> {sc.headOfSchool.mobile ? `(${sc.headOfSchool.mobile})` : ""}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-amber-600 italic mt-0.5">HM details pending</p>
+                          )}
                           <p className="text-xs text-gray-500 mt-0.5">{sc.block ?? "—"} · {sc.management ?? "—"}</p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -2702,7 +2757,19 @@ export default function AdminDashboardClient({
                       ) : paginatedSchools.map((sc) => (
                         <TableRow key={sc.udise}>
                           <TableCell className="font-mono font-bold text-[hsl(213,56%,24%)]">{sc.udise}</TableCell>
-                          <TableCell className="font-semibold text-gray-900 max-w-xs truncate">{sc.name}</TableCell>
+                          <TableCell className="max-w-xs">
+                            <div className="font-semibold text-gray-900 truncate">{sc.name}</div>
+                            {sc.headOfSchool?.name ? (
+                              <div className="text-xs text-gray-500 truncate mt-0.5">
+                                HM: <span className="text-gray-800 font-medium">{sc.headOfSchool.name}</span>
+                                {sc.headOfSchool.mobile && (
+                                  <span className="font-mono text-gray-600"> · {sc.headOfSchool.mobile}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-amber-600 italic mt-0.5">HM details pending</div>
+                            )}
+                          </TableCell>
                           <TableCell className="text-xs text-purple-800 font-medium max-w-[180px] truncate">{sc.management ?? "—"}</TableCell>
                           <TableCell className="text-gray-600 text-xs">{sc.block ?? "—"} / {sc.educationDistrict ?? "—"}</TableCell>
                           <TableCell>

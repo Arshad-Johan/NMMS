@@ -480,6 +480,7 @@ export async function exportAttendanceExcelAction(
         ...(blocks.length > 0 ? { block: { in: blocks } } : {}),
       },
       include: {
+        headOfSchool: true,
         teachers: {
           where: { isActive: true },
           take: 1,
@@ -511,6 +512,8 @@ export async function exportAttendanceExcelAction(
       { header: "Block", key: "block", width: 20 },
       { header: "District", key: "district", width: 20 },
       { header: "Category Type", key: "category", width: 25 },
+      { header: "HM/Incharge Name", key: "hmName", width: 26 },
+      { header: "HM/Incharge Phone Number", key: "hmPhone", width: 22 },
       { header: "Attendance Status", key: "status", width: 20 },
       { header: "Marked Time", key: "markedAt", width: 15 },
     ];
@@ -542,6 +545,8 @@ export async function exportAttendanceExcelAction(
         block: sc.block ?? "N/A",
         district: sc.educationDistrict ?? "N/A",
         category: sc.categoryType ? sc.categoryType.replace("_", " ") : "N/A",
+        hmName: sc.headOfSchool?.name || "",
+        hmPhone: sc.headOfSchool?.mobile || "",
         status: statusText,
         markedAt: attendanceRecord?.markedAt
           ? new Date(attendanceRecord.markedAt).toLocaleTimeString("en-IN", {
@@ -695,6 +700,7 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
     const allSchools = await prisma.school.findMany({
       where: schoolFilter,
       include: {
+        headOfSchool: true,
         teachers: {
           where: { isActive: true },
           take: 1,
@@ -730,6 +736,8 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
       { header: "Block", key: "block", width: 18 },
       { header: "District", key: "district", width: 18 },
       { header: "Category Type", key: "category", width: 24 },
+      { header: "HM/Incharge Name", key: "hmName", width: 26 },
+      { header: "HM/Incharge Phone Number", key: "hmPhone", width: 22 },
     ];
 
     // Dynamic session columns (one column per session)
@@ -835,6 +843,8 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
         block: sc.block ?? "N/A",
         district: sc.educationDistrict ?? "N/A",
         category: sc.categoryType ? sc.categoryType.replace("_", " ") : "N/A",
+        hmName: sc.headOfSchool?.name || "",
+        hmPhone: sc.headOfSchool?.mobile || "",
         ...item.sessionValues,
         totalPresent: item.totalPresent,
         totalAbsent: item.totalAbsent,
@@ -885,6 +895,109 @@ export async function exportConsolidatedAttendanceExcelAction(filters?: {
   } catch (err: any) {
     console.error("exportConsolidatedAttendanceExcelAction error:", err);
     return { error: err.message ?? "Consolidated export failed." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4C. EXPORT SCHOOLS HM / INCHARGE DIRECTORY
+// ---------------------------------------------------------------------------
+
+export async function exportSchoolsHosDirectoryExcelAction(): Promise<{
+  base64?: string;
+  filename?: string;
+  count?: number;
+  error?: string;
+}> {
+  const session = await getSession();
+  if (!session || session.role !== "admin") return { error: "Unauthorized." };
+
+  try {
+    const schools = await prisma.school.findMany({
+      where: { isActive: true },
+      include: {
+        headOfSchool: true,
+      },
+      orderBy: [{ block: "asc" }, { name: "asc" }],
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "CEO - Madurai | Gmeet Attendance Portal";
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet("HM Incharge Directory", {
+      properties: { tabColor: { argb: "FF0072C6" } },
+    });
+
+    sheet.columns = [
+      { header: "S.No", key: "sno", width: 8 },
+      { header: "UDISE Code", key: "udise", width: 16 },
+      { header: "School Name", key: "name", width: 42 },
+      { header: "HM/Incharge Name", key: "hmName", width: 28 },
+      { header: "HM/Incharge Phone Number", key: "hmPhone", width: 22 },
+      { header: "Designation / Role", key: "hosType", width: 32 },
+      { header: "Block", key: "block", width: 20 },
+      { header: "District", key: "district", width: 20 },
+      { header: "School Type", key: "schoolType", width: 24 },
+      { header: "Management", key: "management", width: 30 },
+      { header: "Category Type", key: "categoryType", width: 24 },
+      { header: "Status", key: "status", width: 18 },
+    ];
+
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1B365D" },
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+    headerRow.height = 24;
+
+    schools.forEach((sc, idx) => {
+      const hos = sc.headOfSchool;
+      const isCompleted = Boolean(hos?.name?.trim() && hos?.mobile?.trim());
+
+      const row = sheet.addRow({
+        sno: idx + 1,
+        udise: sc.udise,
+        name: sc.name,
+        hmName: hos?.name || "",
+        hmPhone: hos?.mobile || "",
+        hosType: hos?.hosType ? hos.hosType.replace(/_/g, " ") : "",
+        block: sc.block ?? "",
+        district: sc.educationDistrict ?? "",
+        schoolType: sc.schoolType ?? "",
+        management: sc.management ?? "",
+        categoryType: sc.categoryType ? sc.categoryType.replace(/_/g, " ") : "",
+        status: isCompleted ? "COMPLETED" : "PENDING",
+      });
+
+      const statusCell = row.getCell("status");
+      statusCell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: isCompleted ? "FFC6EFCE" : "FFFFC7CE" },
+      };
+      statusCell.font = {
+        color: { argb: isCompleted ? "FF006100" : "FF9C0006" },
+        bold: true,
+      };
+      statusCell.alignment = { horizontal: "center" };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const filename = `CEO_Madurai_Schools_HM_Incharge_Directory_${dateStamp}.xlsx`;
+
+    return {
+      base64,
+      filename,
+      count: schools.length,
+    };
+  } catch (err: any) {
+    console.error("exportSchoolsHosDirectoryExcelAction error:", err);
+    return { error: err.message ?? "Export failed." };
   }
 }
 

@@ -48,6 +48,7 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.school.findMany({
+      include: { headOfSchool: true },
       orderBy: { name: "asc" },
     }),
     prisma.attendance.findMany({
@@ -126,6 +127,17 @@ export default async function AdminDashboardPage() {
       initialSchools={schools.map((sc) => ({
         ...sc,
         createdAt: sc.createdAt.toISOString(),
+        updatedAt: sc.updatedAt.toISOString(),
+        headOfSchool: sc.headOfSchool
+          ? {
+              ...sc.headOfSchool,
+              createdAt: sc.headOfSchool.createdAt.toISOString(),
+              updatedAt: sc.headOfSchool.updatedAt.toISOString(),
+              lastAdminUpdate: sc.headOfSchool.lastAdminUpdate
+                ? sc.headOfSchool.lastAdminUpdate.toISOString()
+                : null,
+            }
+          : null,
       }))}
       initialAttendance={recentAttendance.map((a) => ({
         ...a,
