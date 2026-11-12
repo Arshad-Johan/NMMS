@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import { NmmsNoticePopup } from "@/components/nmms-popup";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased bg-[hsl(220,14%,96%)] text-gray-900 min-h-screen">
+        <NmmsNoticePopup />
         {children}
         <Toaster position="top-right" theme="light" richColors closeButton />
       </body>
